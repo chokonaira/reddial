@@ -3,10 +3,15 @@ import { OpenAICompatibleAdapter } from "./adapters/openai-compatible.js";
 import { WebhookAdapter } from "./adapters/webhook.js";
 import { type RunConfig, RunConfigSchema } from "./config.js";
 import { buildRunGraph } from "./graph/build.js";
+import { anthropicChat, type ChatFactory } from "./llm.js";
 import { buildKnowledgeBase } from "./rag/ingest.js";
 import type { KnowledgeBase } from "./rag/store.js";
-import type { RunReport } from "./types.js";
 import { overallScore } from "./report/markdown.js";
+import type { RunReport } from "./types.js";
+
+export interface RunOverrides {
+  chat?: ChatFactory;
+}
 
 function makeAdapter(config: RunConfig): TargetAdapter {
   if (config.targetType === "webhook") {
@@ -19,7 +24,24 @@ function makeAdapter(config: RunConfig): TargetAdapter {
   });
 }
 
-export async function run(rawConfig: unknown): Promise<RunReport> {
+function redactUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.username || u.password) {
+      u.username = "";
+      u.password = "";
+      return `${u.toString()} (credentials redacted)`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+export async function run(
+  rawConfig: unknown,
+  overrides: RunOverrides = {},
+): Promise<RunReport> {
   const config = RunConfigSchema.parse(rawConfig);
 
   let kb: KnowledgeBase | null = null;
@@ -29,13 +51,18 @@ export async function run(rawConfig: unknown): Promise<RunReport> {
   }
 
   const target = makeAdapter(config);
-  const graph = buildRunGraph({ target, kb });
+  const graph = buildRunGraph({ target, kb, chat: overrides.chat ?? anthropicChat });
 
-  const state = await graph.invoke({ config }, { recursionLimit: 100 });
+  // Keep the target secret out of graph state (and any tracing of Send payloads).
+  const { targetApiKey: _secret, ...graphConfig } = config;
+  const state = await graph.invoke(
+    { config: graphConfig },
+    { recursionLimit: 100, maxConcurrency: config.maxConcurrency },
+  );
 
   return {
     startedAt: new Date().toISOString(),
-    target: `${target.name} → ${config.targetUrl}`,
+    target: `${target.name} → ${redactUrl(config.targetUrl)}`,
     scenarios: state.scenarios,
     transcripts: state.transcripts,
     judgeResults: state.judgeResults,

@@ -19,7 +19,10 @@ program
   .requiredOption("-t, --target <url>", "target endpoint (OpenAI-compatible base URL or webhook URL)")
   .option("--type <type>", "target type: openai | webhook", "openai")
   .option("--model <model>", "model name sent to OpenAI-compatible targets")
-  .option("--target-key <key>", "API key for the target, if it needs one")
+  .option(
+    "--target-key <key>",
+    "API key for the target (prefer REDDIAL_TARGET_API_KEY env var)",
+  )
   .option(
     "-p, --personas <keys>",
     `comma-separated personas: ${PERSONAS.map((p) => p.key).join(",")}`,
@@ -27,6 +30,7 @@ program
   )
   .option("-n, --scenarios <n>", "scenarios per persona", "1")
   .option("--max-turns <n>", "max user turns per conversation", "8")
+  .option("--max-concurrency <n>", "max concurrent simulations/judges", "8")
   .option("--kb <dir>", "directory of .md/.txt ground-truth docs (enables groundedness judge)")
   .option("-o, --out <file>", "report output path", "reddial-report.md")
   .action(async (opts) => {
@@ -43,10 +47,11 @@ program
       targetUrl: opts.target,
       targetType: opts.type,
       targetModel: opts.model,
-      targetApiKey: opts.targetKey,
+      targetApiKey: opts.targetKey ?? process.env.REDDIAL_TARGET_API_KEY,
       personas: String(opts.personas).split(",").map((s: string) => s.trim()),
       scenariosPerPersona: Number(opts.scenarios),
       maxTurns: Number(opts.maxTurns),
+      maxConcurrency: Number(opts.maxConcurrency),
       kbDir: opts.kb,
       out: opts.out,
     });
@@ -55,7 +60,7 @@ program
     for (const t of report.transcripts) {
       const scores = report.judgeResults
         .filter((r) => r.scenarioId === t.scenarioId)
-        .map((r) => `${r.rubric}=${r.score}/5`)
+        .map((r) => `${r.rubric}=${r.status === "error" ? "err" : `${r.score}/5`}`)
         .join(" ");
       console.log(`  ${t.scenarioId} [${t.endReason}] ${scores}`);
     }

@@ -1,7 +1,7 @@
 {
   "name": "reddial",
   "version": "0.0.1",
-  "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with an LLM judge panel.",
+  "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with deterministic decision-tree judges.",
   "type": "module",
   "license": "MIT",
   "author": "Henry Okonkwo",
@@ -24,6 +24,12 @@
   "bin": {
     "reddial": "dist/cli.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -35,10 +41,13 @@
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "demo-target": "tsx examples/demo-target.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
+    "test": "vitest run",
+    "prepack": "npm run build"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.4.0",
@@ -46,14 +55,14 @@
     "@langchain/langgraph": "^1.4.1",
     "@langchain/openai": "^1.4.7",
     "@langchain/textsplitters": "^1.0.1",
-    "commander": "^15.0.0",
+    "commander": "^14.0.3",
     "dotenv": "^17.4.2",
-    "langchain": "^1.4.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^2.1.9"
   }
 }

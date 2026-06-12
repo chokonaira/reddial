@@ -4,6 +4,34 @@ function avg(nums: number[]): number {
   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
 }
 
+function median(nums: number[]): number {
+  if (!nums.length) return 0;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+}
+
+// Untrusted text (goals, transcripts, evidence) is attacker-controlled by design.
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function cell(s: string): string {
+  return esc(s).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
+// Body text additionally defangs markdown links/images and code spans, so an
+// adversarial transcript can render no active content.
+function body(s: string): string {
+  return esc(s)
+    .replace(/\[/g, "&#91;")
+    .replace(/`/g, "&#96;")
+    .replace(/\r?\n/g, " ");
+}
+
 function scoreEmoji(score: number): string {
   if (score >= 4) return "🟢";
   if (score >= 3) return "🟡";
@@ -14,51 +42,58 @@ function resultsFor(report: RunReport, scenarioId: string): JudgeResult[] {
   return report.judgeResults.filter((r) => r.scenarioId === scenarioId);
 }
 
+function verdictCell(r: JudgeResult | undefined): string {
+  if (!r) return "—";
+  if (r.status === "error") return "⚠️ err";
+  return `${scoreEmoji(r.score)} ${r.score}/5`;
+}
+
 function transcriptSection(t: Transcript, results: JudgeResult[]): string {
   const verdicts = results
-    .map(
-      (r) =>
-        `**${r.rubric}** ${scoreEmoji(r.score)} ${r.score}/5 — ${r.reasoning}` +
-        (r.evidence.length
-          ? `\n${r.evidence.map((e) => `  > ${e}`).join("\n")}`
-          : ""),
-    )
+    .map((r) => {
+      const head =
+        r.status === "error"
+          ? `**${r.rubric}** ⚠️ judge error — ${esc(r.reasoning)}`
+          : `**${r.rubric}** ${scoreEmoji(r.score)} ${r.score}/5 — ${esc(r.reasoning)}`;
+      const path = r.path.length ? `\n_path:_ ${r.path.map(esc).join(" → ")}` : "";
+      const evidence = r.evidence.length
+        ? `\n${r.evidence.map((e) => `> ${esc(e)}`).join("\n")}`
+        : "";
+      return head + path + evidence;
+    })
     .join("\n\n");
 
   const turns = t.turns
-    .map((turn) => `**${turn.role === "user" ? "🧑 Customer" : "🤖 Agent"}:** ${turn.content}`)
+    .map((turn) => `**${turn.role === "user" ? "🧑 Customer" : "🤖 Agent"}:** ${body(turn.content)}`)
     .join("\n\n");
 
   return [
-    `### \`${t.scenarioId}\` — ${t.goal}`,
+    `### \`${cell(t.scenarioId)}\` — ${esc(t.goal)}`,
     `End reason: \`${t.endReason}\` · Median agent latency: ${median(t.targetLatencyMs)}ms`,
     verdicts,
     `<details><summary>Full transcript (${t.turns.length} turns)</summary>\n\n${turns}\n\n</details>`,
   ].join("\n\n");
 }
 
-function median(nums: number[]): number {
-  if (!nums.length) return 0;
-  const sorted = [...nums].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
-}
-
 export function renderReport(report: RunReport): string {
   const rows = report.transcripts.map((t) => {
     const rs = resultsFor(report, t.scenarioId);
-    const byRubric = (rubric: string) => {
-      const r = rs.find((x) => x.rubric === rubric);
-      return r ? `${scoreEmoji(r.score)} ${r.score}/5` : "—";
-    };
-    return `| \`${t.scenarioId}\` | ${t.personaKey} | ${t.endReason} | ${byRubric(
+    const at = (rubric: string) => verdictCell(rs.find((x) => x.rubric === rubric));
+    return `| \`${cell(t.scenarioId)}\` | ${cell(t.personaKey)} | ${t.endReason} | ${at(
       "task-completion",
-    )} | ${byRubric("groundedness")} | ${byRubric("tone-policy")} |`;
+    )} | ${at("groundedness")} | ${at("tone-policy")} |`;
   });
+
+  const errored = report.judgeResults.filter((r) => r.status === "error").length;
+  const completeness = errored
+    ? `\n> ⚠️ ${errored} judge run(s) failed and are excluded from the score. Report is incomplete.`
+    : "";
 
   return [
     `# 🔴 RedDial Report`,
     ``,
-    `**Target:** \`${report.target}\` · **Started:** ${report.startedAt} · **Overall: ${report.overallScore}/100**`,
+    `**Target:** \`${cell(report.target)}\` · **Started:** ${report.startedAt} · **Overall: ${report.overallScore}/100**`,
+    completeness,
     ``,
     `| Scenario | Persona | End | Task | Grounded | Tone/Policy |`,
     `|---|---|---|---|---|---|`,
@@ -74,5 +109,6 @@ export function renderReport(report: RunReport): string {
 }
 
 export function overallScore(results: JudgeResult[]): number {
-  return Math.round((avg(results.map((r) => r.score)) / 5) * 100);
+  const ok = results.filter((r) => r.status === "ok");
+  return ok.length ? Math.round((avg(ok.map((r) => r.score)) / 5) * 100) : 0;
 }

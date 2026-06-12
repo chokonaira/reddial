@@ -1,3 +1,4 @@
+import { postJson } from "./http.js";
 import type { TargetAdapter, TargetSession } from "./types.js";
 
 export interface OpenAICompatibleOptions {
@@ -5,6 +6,7 @@ export interface OpenAICompatibleOptions {
   baseUrl: string;
   model?: string;
   apiKey?: string;
+  timeoutMs?: number;
 }
 
 interface ChatMessage {
@@ -20,26 +22,25 @@ export class OpenAICompatibleAdapter implements TargetAdapter {
 
   createSession(): TargetSession {
     const history: ChatMessage[] = [];
-    const { baseUrl, model, apiKey } = this.opts;
+    const { baseUrl, model, apiKey, timeoutMs } = this.opts;
+    const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
 
     return {
       send: async (message: string) => {
         history.push({ role: "user", content: message });
-        const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+        const data = (await postJson(
+          url,
+          { model: model ?? "default", messages: history },
+          {
+            headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
+            timeoutMs,
           },
-          body: JSON.stringify({ model: model ?? "default", messages: history }),
-        });
-        if (!res.ok) {
-          throw new Error(`Target returned ${res.status}: ${await res.text()}`);
+        )) as { choices?: { message?: { content?: unknown } }[] };
+
+        const reply = data.choices?.[0]?.message?.content;
+        if (typeof reply !== "string") {
+          throw new Error("Target response missing choices[0].message.content string");
         }
-        const data = (await res.json()) as {
-          choices: { message: { content: string } }[];
-        };
-        const reply = data.choices[0]?.message?.content ?? "";
         history.push({ role: "assistant", content: reply });
         return reply;
       },

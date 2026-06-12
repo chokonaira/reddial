@@ -22,7 +22,7 @@ export interface Transcript {
   personaKey: string;
   goal: string;
   turns: Turn[];
-  endReason: "goal-reached" | "gave-up" | "max-turns" | "target-error";
+  endReason: "goal-reached" | "gave-up" | "max-turns" | "target-error" | "persona-error";
   targetLatencyMs: number[];
 }
 
@@ -31,11 +31,14 @@ export type RubricKey = "task-completion" | "groundedness" | "tone-policy";
 export interface JudgeResult {
   scenarioId: string;
   rubric: RubricKey;
-  /** 1 broken .. 5 flawless */
+  status: "ok" | "error";
+  /** 1 broken .. 5 flawless; 0 when status is "error" */
   score: number;
   passed: boolean;
   reasoning: string;
   evidence: string[];
+  /** the decision path taken through the rubric DAG */
+  path: string[];
 }
 
 export interface RunReport {
@@ -44,6 +47,6 @@ export interface RunReport {
   scenarios: Scenario[];
   transcripts: Transcript[];
   judgeResults: JudgeResult[];
-  /** 0..100 */
+  /** 0..100, over status:"ok" results only */
   overallScore: number;
 }

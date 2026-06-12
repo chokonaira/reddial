@@ -15,6 +15,7 @@ export const RunConfigSchema = z.object({
   personas: z.array(z.string()).min(1),
   scenariosPerPersona: z.number().int().min(1).max(10).default(1),
   maxTurns: z.number().int().min(2).max(40).default(8),
+  maxConcurrency: z.number().int().min(1).max(64).default(8),
 
   // ground-truth docs dir; presence enables the groundedness judge
   kbDir: z.string().optional(),

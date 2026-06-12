@@ -6,6 +6,20 @@ import { KnowledgeBase } from "./store.js";
 
 const TEXT_EXTENSIONS = new Set([".md", ".txt", ".mdx"]);
 
+async function walk(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await walk(full)));
+    } else if (entry.isFile() && TEXT_EXTENSIONS.has(extname(entry.name))) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
 export async function buildKnowledgeBase(
   dir: string,
   embeddingModel = "text-embedding-3-small",
@@ -16,11 +30,7 @@ export async function buildKnowledgeBase(
   });
   const kb = new KnowledgeBase(new OpenAIEmbeddings({ model: embeddingModel }));
 
-  const entries = await readdir(dir, { withFileTypes: true, recursive: true });
-  const files = entries
-    .filter((e) => e.isFile() && TEXT_EXTENSIONS.has(extname(e.name)))
-    .map((e) => join(e.parentPath ?? dir, e.name));
-
+  const files = await walk(dir);
   if (files.length === 0) {
     throw new Error(`No .md/.txt files found under ${dir}`);
   }

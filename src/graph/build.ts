@@ -1,5 +1,5 @@
 import { END, START, Send, StateGraph } from "@langchain/langgraph";
-import type { RubricKey } from "../types.js";
+import { dagsFor } from "../judge/rubrics.js";
 import type { GraphDeps } from "./deps.js";
 import { makeJudgeNode } from "./nodes/judge.js";
 import { makeReporterNode } from "./nodes/reporter.js";
@@ -9,21 +9,19 @@ import { RunState, type RunStateType } from "./state.js";
 
 // START → generate_scenarios ─Send×N→ simulate → gather ─Send×(N×rubrics)→ judge → report → END
 export function buildRunGraph(deps: GraphDeps) {
+  const rubrics = dagsFor(deps.kb !== null).map((d) => d.rubric);
+
   const fanOutSimulations = (state: RunStateType) =>
     state.scenarios.map(
       (scenario) => new Send("simulate", { config: state.config, scenario }),
     );
 
-  const fanOutJudges = (state: RunStateType) => {
-    const rubrics: RubricKey[] = deps.kb
-      ? ["task-completion", "groundedness", "tone-policy"]
-      : ["task-completion", "tone-policy"];
-    return state.transcripts.flatMap((transcript) =>
+  const fanOutJudges = (state: RunStateType) =>
+    state.transcripts.flatMap((transcript) =>
       rubrics.map(
         (rubric) => new Send("judge", { config: state.config, transcript, rubric }),
       ),
     );
-  };
 
   return new StateGraph(RunState)
     .addNode("generate_scenarios", makeScenarioGeneratorNode(deps))

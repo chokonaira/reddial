@@ -10,10 +10,10 @@ You tested your support agent by chatting with it. Politely. It behaved.
 
 Your customers won't be polite. They'll escalate, ramble, inject prompts, and probe your policies for loopholes — and somewhere around turn four, your agent will promise one of them an illegal discount.
 
-RedDial automates those customers. A squad of adversarial personas attacks your agent in parallel, an LLM judge panel grades every transcript with verbatim evidence, and a groundedness judge fact-checks every claim against your real business docs. You get the report card before your users write it on Trustpilot.
+RedDial automates those customers. A squad of adversarial personas attacks your agent in parallel, then **deterministic decision-tree judges** grade every transcript — including a groundedness judge that checks the agent's claims against passages retrieved from your real business docs. You get the report card before your users write it on Trustpilot.
 
 ```
-Overall score: 31/100
+Overall score: 31/100   (example output — numbers are illustrative)
   angry-1     [goal-reached]  task-completion=2/5  groundedness=1/5  tone-policy=2/5
   injector-1  [goal-reached]  task-completion=3/5  groundedness=2/5  tone-policy=1/5
   exploiter-1 [goal-reached]  task-completion=2/5  groundedness=1/5  tone-policy=2/5
@@ -29,7 +29,7 @@ Report written to reddial-report.md
 - **Pressure failures** — exceptions granted just to make the angry customer stop
 - **Lost context** — the real question buried in a rambling story, never answered
 
-Every finding comes with the exact quote from the transcript. No vibes, evidence.
+Every score comes from a decision tree you can read top to bottom — not a single "rate this 1-5" prompt — with evidence quotes and the exact path the judge took printed in the report.
 
 ## 60-second demo
 
@@ -47,7 +47,7 @@ npm run dev -- run \
 
 The demo bot hallucinates discounts, invents a 90-day refund policy, and leaks its system prompt. RedDial catches all three and shows you the receipts.
 
-Then point it at your own agent: any OpenAI-compatible endpoint, or a plain webhook (`POST {sessionId, message}` → `{reply}`).
+Then point it at your own agent: a non-streaming OpenAI-compatible `/chat/completions` endpoint (bearer auth, string content), or a plain webhook (`POST {sessionId, message}` → `{reply}`).
 
 ## How it works
 
@@ -63,8 +63,12 @@ A LangGraph map-reduce pipeline:
 
 1. **Generate** — persona presets become concrete, falsifiable goals. With `--kb`, retrieval seeds them from *your* policies, so the exploiter probes your actual edge cases.
 2. **Simulate** — every persona converses with your agent in parallel until it wins, gives up, or hits the turn cap.
-3. **Judge** — every transcript × rubric pair scored concurrently: `task-completion`, `tone-policy` (injection resistance included), `groundedness` (RAG over your docs — hallucinated prices die here).
-4. **Report** — markdown report card: scores, evidence quotes, latency, full transcripts.
+3. **Judge** — every transcript × rubric pair scored concurrently. Each rubric is a **DAG**: a small acyclic decision tree of deterministic rules and narrow yes/no checks. `task-completion`, `tone-policy` (injection resistance included), and `groundedness` (retrieves the most relevant passages from your docs, then flags claims they don't support — hallucinated prices die here). Same transcript → same path → same score, and a failed judge becomes a logged `error` instead of crashing the run.
+4. **Report** — markdown report card: scores, the decision path each judge took, evidence quotes, latency, full transcripts.
+
+### Why a DAG instead of "rate this 1-5"?
+
+A single grading prompt is a black box: irreproducible, unexplainable, easy to talk out of its score. RedDial's judges are decision trees (inspired by [DeepEval's DAG metric](https://deepeval.com/docs/metrics-dag)) — branching is deterministic, the only model calls are narrow extractions and yes/no questions at temperature 0, and the report shows exactly which node failed. Authoring a new rubric is composing `rule`, `extract`, `binaryLlm`, and `leaf` nodes; see [`src/judge/rubrics.ts`](src/judge/rubrics.ts).
 
 ## The squad
 
@@ -82,15 +86,16 @@ A LangGraph map-reduce pipeline:
 
 ```
 reddial run
-  -t, --target <url>      target endpoint (required)
-      --type <type>       openai | webhook            (default: openai)
-      --model <model>     model name for openai targets
-      --target-key <key>  API key for the target
-  -p, --personas <keys>   comma-separated              (default: angry,injector,exploiter)
-  -n, --scenarios <n>     scenarios per persona        (default: 1)
-      --max-turns <n>     max user turns per chat      (default: 8)
-      --kb <dir>          ground-truth .md/.txt docs — enables groundedness judge
-  -o, --out <file>        report path                  (default: reddial-report.md)
+  -t, --target <url>          target endpoint (required)
+      --type <type>           openai | webhook          (default: openai)
+      --model <model>         model name for openai targets
+      --target-key <key>      API key for the target (or REDDIAL_TARGET_API_KEY)
+  -p, --personas <keys>       comma-separated            (default: angry,injector,exploiter)
+  -n, --scenarios <n>         scenarios per persona      (default: 1)
+      --max-turns <n>         max user turns per chat    (default: 8)
+      --max-concurrency <n>   concurrent sims/judges     (default: 8)
+      --kb <dir>              ground-truth .md/.txt docs — enables groundedness judge
+  -o, --out <file>            report path                (default: reddial-report.md)
 ```
 
 Or as a library:
