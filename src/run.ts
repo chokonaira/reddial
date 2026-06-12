@@ -1,3 +1,4 @@
+import { setMaxListeners } from "node:events";
 import type { TargetAdapter } from "./adapters/types.js";
 import { OpenAICompatibleAdapter } from "./adapters/openai-compatible.js";
 import { WebhookAdapter } from "./adapters/webhook.js";
@@ -43,6 +44,10 @@ export async function run(
   overrides: RunOverrides = {},
 ): Promise<RunReport> {
   const config = RunConfigSchema.parse(rawConfig);
+
+  // Each concurrent LLM call registers an abort listener on the graph's shared
+  // signal; lift Node's default cap of 10 so concurrency doesn't warn.
+  setMaxListeners(Math.max(20, config.maxConcurrency * 4));
 
   let kb: KnowledgeBase | null = null;
   if (config.kbDir) {
