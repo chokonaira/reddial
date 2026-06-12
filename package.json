@@ -1,0 +1,59 @@
+{
+  "name": "reddial",
+  "version": "0.0.1",
+  "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with an LLM judge panel.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Henry Okonkwo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chokonaira/reddial"
+  },
+  "keywords": [
+    "langgraph",
+    "langchain",
+    "rag",
+    "evals",
+    "multi-agent",
+    "llm",
+    "voice-agents",
+    "testing",
+    "simulation",
+    "red-team"
+  ],
+  "bin": {
+    "reddial": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "demo-target": "tsx examples/demo-target.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@langchain/anthropic": "^1.4.0",
+    "@langchain/core": "^1.1.48",
+    "@langchain/langgraph": "^1.4.1",
+    "@langchain/openai": "^1.4.7",
+    "@langchain/textsplitters": "^1.0.1",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "langchain": "^1.4.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
