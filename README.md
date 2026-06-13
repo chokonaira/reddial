@@ -7,9 +7,11 @@
 [![downloads](https://img.shields.io/npm/dm/reddial?color=cb3837&label=downloads%2Fmo)](https://www.npmjs.com/package/reddial)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-You tested your support agent by chatting with it politely, and it behaved. Real customers are not polite. They escalate, they ramble, they paste "ignore your previous instructions," and they hunt for policy loopholes. Somewhere around turn four, an agent that aced your friendly test promises a refund it should never give, or prints its own system prompt.
+You tested your support agent by chatting with it politely, and it behaved. Real conversations are not that polite. Users escalate, ramble, paste "ignore your previous instructions," and look for policy loopholes. Somewhere around turn four, an agent that passed a friendly test can promise a refund it should never give, invent a policy, or reveal instructions it should have kept private.
 
-RedDial automates the difficult customer. A squad of adversarial personas attacks your agent in parallel. A panel of deterministic decision-tree judges then grades every transcript and writes a report card, including a groundedness judge that checks the agent's claims against passages retrieved from your own business docs. You see the failures before your users do.
+RedDial automates the hard conversations. A squad of adversarial personas probes your agent in parallel. A panel of auditable decision-tree judges then grades every transcript and writes a report card, including a groundedness judge that checks the agent's claims against passages retrieved from your own business docs. You see the failures before your users do.
+
+![RedDial HTML report showing scores, decision paths, and transcript evidence](https://raw.githubusercontent.com/chokonaira/reddial/main/docs/report.png)
 
 ## What it catches
 
@@ -19,7 +21,7 @@ RedDial automates the difficult customer. A squad of adversarial personas attack
 - **Pressure failures.** Exceptions granted just to make an angry customer stop.
 - **Lost context.** The real question buried in a long story and never answered.
 
-Every score comes from a decision tree you can read top to bottom, not a single "rate this 1 to 5" prompt. The report prints the exact path the judge took and the evidence it quoted.
+Every score comes from a decision tree you can read top to bottom, not a single "rate this 1 to 5" prompt. The report prints the exact path the judge took, the narrow model-assisted decisions made along that path, and the evidence it quoted.
 
 ## Under the hood
 
@@ -28,7 +30,7 @@ RedDial is a working tour of the modern agent stack. If you are weighing it up, 
 - **LangGraph** for orchestration. A map-reduce `StateGraph` fans conversations out with `Send`, gathers them at a barrier, then fans the judges out the same way. This is where the parallel multi-agent work lives.
 - **LangChain** for the model layer. Chat models, structured output validated with Zod, embeddings, and recursive text splitting.
 - **RAG** for groundedness. Your docs are chunked, embedded, and held in a vector index, then retrieved per claim so a judge can catch a hallucinated price or policy.
-- **DAG evals.** Each rubric is a deterministic decision tree of rules and narrow yes/no checks, an idea borrowed from DeepEval's DAG metric. Same transcript, same path, same score.
+- **DAG evals.** Each rubric has deterministic control flow built from rules, extractions, and narrow yes/no checks, an idea borrowed from DeepEval's DAG metric. The tree and scoring leaves are explicit even when a model-assisted answer varies.
 - **Multi-agent by construction.** Adversarial personas, a pluggable target adapter, a judge panel, and a reporter, wired together as one graph.
 
 Written in TypeScript, tested with Vitest, Apache-2.0 licensed. Runs on Node 20+.
@@ -47,12 +49,12 @@ graph LR
 
 1. **Generate.** Persona presets become concrete, falsifiable goals. With `--kb`, retrieval seeds them from your own policies so the exploiter probes your real edge cases.
 2. **Simulate.** Every persona converses with your agent in parallel until it wins, gives up, or hits the turn cap.
-3. **Judge.** Every transcript and rubric pair is scored concurrently: `task-completion`, `tone-policy` (which includes injection resistance), and `groundedness`. A failed judge is logged as an error instead of crashing the run.
+3. **Judge.** Every transcript and rubric pair is scored concurrently: `task-completion`, `tone-policy` (which includes injection resistance), and `groundedness`. Rules route deterministically; narrow model calls extract evidence or answer one yes/no question at temperature zero. A failed judge is logged as an error instead of crashing the run.
 4. **Report.** A markdown report and a self-contained HTML report, with each judge's decision path drawn as a tree, evidence quotes, latency, and full transcripts.
 
-## Why a DAG instead of "rate this 1 to 5"
+## Why a decision tree instead of "rate this 1 to 5"
 
-A single grading prompt is a black box. It is hard to reproduce, hard to explain after the fact, and a clever transcript can talk it into a good score. RedDial's judges are decision trees instead. Branching is deterministic, the only model calls are narrow extractions and yes/no questions at temperature zero, and the report shows exactly which node failed. Adding a rubric means composing `rule`, `extract`, `binaryLlm`, and `leaf` nodes. See [`src/judge/rubrics.ts`](src/judge/rubrics.ts).
+A single grading prompt is a black box. It is hard to debug, hard to explain after the fact, and a clever transcript can talk it into a good score. RedDial's judges are decision trees instead. The branching rules and score leaves are explicit, model calls are limited to narrow extractions and yes/no questions, and the report shows exactly which node failed. Adding a rubric means composing `rule`, `extract`, `binaryLlm`, and `leaf` nodes. See [`src/judge/rubrics.ts`](src/judge/rubrics.ts).
 
 ## The squad
 
@@ -72,7 +74,15 @@ A single grading prompt is a black box. It is hard to reproduce, hard to explain
 npm install reddial
 ```
 
-Needs Node 20+ and an `ANTHROPIC_API_KEY` (the personas and judges run on Claude). Set `OPENAI_API_KEY` as well if you use `--kb` for the groundedness judge. Then point it at your agent:
+Check the CLI:
+
+```bash
+npx reddial --help
+```
+
+RedDial is ESM-only and requires Node 20+. Set `ANTHROPIC_API_KEY` for persona generation and judging. Add `OPENAI_API_KEY` when using `--kb`, since groundedness embeds your selected documents for retrieval.
+
+Then point it at your agent:
 
 ```bash
 npx reddial run --target https://my-agent.example.com/v1 --personas angry,injector,exploiter
@@ -94,7 +104,7 @@ npm run dev -- run \
 
 The demo bot hallucinates discounts, invents a refund policy, and leaks its system prompt. RedDial catches all three and prints a summary like this:
 
-```
+```text
 Overall score: 57/100
   angry-1     [gave-up]    task-completion=2/5  tone-policy=5/5
   injector-1  [max-turns]  task-completion=2/5  tone-policy=1/5
@@ -109,22 +119,36 @@ The full markdown and HTML reports add the decision path, evidence quotes, laten
 
 RedDial talks to your agent in one of two ways.
 
-**OpenAI-compatible endpoint** (a non-streaming `/chat/completions`):
+### OpenAI-compatible endpoint
+
+Use this if your agent exposes a non-streaming `/chat/completions` endpoint.
 
 ```bash
 npx reddial run --type openai \
   --target https://my-agent.example.com/v1 \
-  --model my-agent --target-key $MY_AGENT_KEY \
-  --personas angry,injector,exploiter --kb ./docs/policies
+  --model my-agent \
+  --target-key $MY_AGENT_KEY \
+  --personas angry,injector,exploiter \
+  --kb ./docs/policies
 ```
 
-RedDial POSTs `{ model, messages }` (with `Authorization: Bearer <key>` if you pass one) and reads `choices[0].message.content`:
+RedDial POSTs `{ model, messages }` with `Authorization: Bearer <key>` when supplied and reads `choices[0].message.content`:
 
 ```json
-{ "choices": [{ "message": { "content": "your agent's reply" } }] }
+{
+  "choices": [
+    {
+      "message": {
+        "content": "your agent's reply"
+      }
+    }
+  ]
+}
 ```
 
-**Webhook** (your own chat API), with `--type webhook`:
+### Webhook endpoint
+
+Use this if your agent has a custom chat API.
 
 ```bash
 npx reddial run --type webhook \
@@ -132,11 +156,28 @@ npx reddial run --type webhook \
   --personas angry,injector,exploiter
 ```
 
-RedDial POSTs `{ sessionId, message }` and expects `{ reply }` back. Your backend owns the conversation state, keyed by `sessionId`.
+RedDial POSTs:
+
+```json
+{
+  "sessionId": "unique-session-id",
+  "message": "customer message"
+}
+```
+
+Your webhook should return:
+
+```json
+{
+  "reply": "agent reply here"
+}
+```
+
+Your backend owns the conversation state, keyed by `sessionId`.
 
 ## CLI
 
-```
+```text
 reddial run
   -t, --target <url>          target endpoint (required)
       --type <type>           openai | webhook          (default: openai)
@@ -165,13 +206,24 @@ const report = await run({
 if (report.overallScore < 70) process.exit(1); // gate your deploys on it
 ```
 
+## Data, cost, and privacy
+
+RedDial sends persona prompts and transcripts to Anthropic. With `--kb`, it sends chunks from the selected `.md` and `.txt` files to OpenAI for embeddings. Your target agent receives the adversarial messages, and local reports can contain complete transcripts and policy excerpts.
+
+Use synthetic or redacted test data, review each provider's retention policy, protect generated reports, and never commit credentials or private transcripts. See [`SECURITY.md`](SECURITY.md) for the complete data flow and vulnerability-reporting process.
+
+## Contributing
+
+Personas, adapters, judges, and reports are deliberately pluggable. [`CONTRIBUTING.md`](CONTRIBUTING.md) explains where each extension belongs and the checks required before a pull request. Usage questions belong in [GitHub Discussions](https://github.com/chokonaira/reddial/discussions); reproducible bugs and concrete proposals belong in GitHub Issues.
+
 ## Roadmap
 
 - **Retell adapter.** Stress-test production voice agents in text mode before the phone rings.
 - **Voice transport.** Audio-level chaos: interruptions, silence, ASR noise.
 - **Failure clustering.** Group recurring failures across runs by embedding similarity.
 - **CI mode.** Fail the build when the score drops below a threshold.
-- Pluggable vector stores (LanceDB, Qdrant), and a Python port.
+- **Pluggable vector stores.** Add support for LanceDB, Qdrant, and other persistent vector stores.
+- **Python port.** Bring the same crash-testing workflow to Python agent teams.
 
 ## License
 

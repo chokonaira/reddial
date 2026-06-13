@@ -1,7 +1,7 @@
 {
   "name": "reddial",
-  "version": "0.1.1",
-  "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with deterministic decision-tree judges.",
+  "version": "0.1.2",
+  "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with auditable decision-tree judges.",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Henry Okonkwo",
@@ -36,12 +36,20 @@
     "dist",
     "README.md",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "docs/RELEASING.md",
+    "SECURITY.md",
+    "SUPPORT.md"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "demo-target": "tsx examples/demo-target.ts",
+    "check:links": "node scripts/check-local-markdown-links.mjs",
+    "package:smoke": "node scripts/package-smoke.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
     "test": "vitest run",
@@ -64,6 +72,6 @@
     "@types/node": "^25.9.3",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^2.1.9"
+    "vitest": "^4.1.8"
   }
 }
