@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Command } from "commander";
 import { PERSONAS } from "./personas/presets.js";
 import { run } from "./run.js";
+import { VERSION } from "./version.js";
 
 const program = new Command();
 
@@ -11,7 +12,7 @@ program
   .description(
     "Adversarial simulation & eval harness for conversational AI agents",
   )
-  .version("0.1.1");
+  .version(VERSION);
 
 program
   .command("run")

@@ -1,0 +1,39 @@
+name: Publish To npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: ${{ github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run typecheck:examples
+      - run: npm test
+      - run: npm run package:smoke
+      - name: Verify release tag matches package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: >-
+          node --input-type=module -e
+          "import pkg from './package.json' with { type: 'json' };
+          if (process.env.RELEASE_TAG !== 'v' + pkg.version) {
+          throw new Error('Release tag ' + process.env.RELEASE_TAG +
+          ' does not match package version ' + pkg.version); }"
+      - run: npm publish --provenance --access public

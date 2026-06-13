@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -22,4 +25,7 @@ jobs:
       - run: npm run typecheck:examples
       - run: npm test
       - run: npm run build
-      - run: npm pack --dry-run
+      - run: npm run check:links
+        if: matrix.node == 20
+      - run: npm run package:smoke
+        if: matrix.node == 20
