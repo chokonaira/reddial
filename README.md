@@ -33,6 +33,8 @@ RedDial is a working tour of the modern agent stack. If you are weighing it up, 
 
 Written in TypeScript, tested with Vitest, MIT licensed.
 
+New to the code? [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) explains each concept in plain terms and points to exactly where it lives.
+
 ## How it works
 
 ```mermaid
