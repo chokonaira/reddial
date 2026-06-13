@@ -11,7 +11,7 @@ program
   .description(
     "Adversarial simulation & eval harness for conversational AI agents",
   )
-  .version("0.0.1");
+  .version("0.1.0");
 
 program
   .command("run")
