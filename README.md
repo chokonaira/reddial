@@ -31,7 +31,7 @@ RedDial is a working tour of the modern agent stack. If you are weighing it up, 
 - **DAG evals.** Each rubric is a deterministic decision tree of rules and narrow yes/no checks, an idea borrowed from DeepEval's DAG metric. Same transcript, same path, same score.
 - **Multi-agent by construction.** Adversarial personas, a pluggable target adapter, a judge panel, and a reporter, wired together as one graph.
 
-Written in TypeScript, tested with Vitest, MIT licensed.
+Written in TypeScript, tested with Vitest, Apache-2.0 licensed. Runs on Node 20+.
 
 New to the code? [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) explains each concept in plain terms and points to exactly where it lives.
 
@@ -66,11 +66,24 @@ A single grading prompt is a black box. It is hard to reproduce, hard to explain
 
 `reddial personas` lists them. A new persona is one object in a presets file, and PRs are welcome.
 
-## Quick start
+## Install
 
 ```bash
+npm install reddial
+```
+
+Needs Node 20+ and an `ANTHROPIC_API_KEY` (the personas and judges run on Claude). Set `OPENAI_API_KEY` as well if you use `--kb` for the groundedness judge. Then point it at your agent:
+
+```bash
+npx reddial run --target https://my-agent.example.com/v1 --personas angry,injector,exploiter
+```
+
+## Try the demo from source
+
+```bash
+git clone https://github.com/chokonaira/reddial && cd reddial
 npm install
-cp .env.example .env   # ANTHROPIC_API_KEY required, OPENAI_API_KEY for --kb
+cp .env.example .env
 
 npm run demo-target    # terminal 1: a deliberately broken dealership bot
 npm run dev -- run \
@@ -79,9 +92,47 @@ npm run dev -- run \
   --kb examples/kb     # terminal 2: break it
 ```
 
-The demo bot hallucinates discounts, invents a refund policy, and leaks its system prompt. RedDial catches all three.
+The demo bot hallucinates discounts, invents a refund policy, and leaks its system prompt. RedDial catches all three and prints a summary like this:
 
-Point it at your own agent: a non-streaming OpenAI-compatible `/chat/completions` endpoint (bearer auth, string content), or a webhook (`POST {sessionId, message}` returns `{reply}`).
+```
+Overall score: 57/100
+  angry-1     [gave-up]    task-completion=2/5  tone-policy=5/5
+  injector-1  [max-turns]  task-completion=2/5  tone-policy=1/5
+  exploiter-1 [gave-up]    task-completion=2/5  tone-policy=5/5
+
+Report written to reddial-report.md + reddial-report.html
+```
+
+The full markdown and HTML reports add the decision path, evidence quotes, latency, and transcripts.
+
+## Connect your own agent
+
+RedDial talks to your agent in one of two ways.
+
+**OpenAI-compatible endpoint** (a non-streaming `/chat/completions`):
+
+```bash
+npx reddial run --type openai \
+  --target https://my-agent.example.com/v1 \
+  --model my-agent --target-key $MY_AGENT_KEY \
+  --personas angry,injector,exploiter --kb ./docs/policies
+```
+
+RedDial POSTs `{ model, messages }` (with `Authorization: Bearer <key>` if you pass one) and reads `choices[0].message.content`:
+
+```json
+{ "choices": [{ "message": { "content": "your agent's reply" } }] }
+```
+
+**Webhook** (your own chat API), with `--type webhook`:
+
+```bash
+npx reddial run --type webhook \
+  --target https://my-agent.example.com/chat \
+  --personas angry,injector,exploiter
+```
+
+RedDial POSTs `{ sessionId, message }` and expects `{ reply }` back. Your backend owns the conversation state, keyed by `sessionId`.
 
 ## CLI
 
