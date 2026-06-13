@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with deterministic decision-tree judges.",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Henry Okonkwo",
   "repository": {
     "type": "git",
@@ -35,7 +35,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "tsc",

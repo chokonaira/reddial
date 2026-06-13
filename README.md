@@ -5,7 +5,7 @@
 [![CI](https://github.com/chokonaira/reddial/actions/workflows/ci.yml/badge.svg)](https://github.com/chokonaira/reddial/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/reddial?color=cb3837)](https://www.npmjs.com/package/reddial)
 [![downloads](https://img.shields.io/npm/dm/reddial?color=cb3837&label=downloads%2Fmo)](https://www.npmjs.com/package/reddial)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 You tested your support agent by chatting with it politely, and it behaved. Real customers are not polite. They escalate, they ramble, they paste "ignore your previous instructions," and they hunt for policy loopholes. Somewhere around turn four, an agent that aced your friendly test promises a refund it should never give, or prints its own system prompt.
 
@@ -124,4 +124,4 @@ if (report.overallScore < 70) process.exit(1); // gate your deploys on it
 
 ## License
 
-MIT
+Apache 2.0

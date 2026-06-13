@@ -2,7 +2,7 @@
 
 This is a guided tour of the codebase. It explains the four ideas the project is built on (LangGraph, LangChain, RAG, and DAG evals), shows exactly where each one lives in the code, and walks one full run from input to report. Read it with the `src/` folder open beside you.
 
-If you only remember one sentence per concept, take the "In one line" notes. They are written so you can say them out loud in an interview.
+Each section explains a concept, says why RedDial uses it, and points to the file where it lives. It is written for anyone who wants to understand the internals, contribute, or adapt RedDial to their own agents.
 
 ## The big picture
 
@@ -107,11 +107,8 @@ The fastest way to feel the architecture is to add to it:
 - **Add a judge rule.** Open [`src/judge/rubrics.ts`](../src/judge/rubrics.ts), add a `rule` or `binaryLlm` node to a rubric, and point an edge at it. Watch the report draw your new branch. You just changed how scoring works.
 - **Add a target adapter.** Implement the `TargetAdapter` interface from [`src/adapters/types.ts`](../src/adapters/types.ts), like the webhook one. You just taught RedDial to talk to a new kind of agent.
 
-## Interview cheat sheet
+## The short version
 
-- **What is it?** An adversarial simulation and evaluation harness for conversational agents.
-- **LangGraph?** Map-reduce orchestration. Fan conversations and judges out in parallel with `Send`, gather with concat reducers.
-- **LangChain?** The model layer. Chat models, Zod structured output, embeddings, text splitting.
-- **RAG?** The groundedness judge. Chunk, embed, store, retrieve the business docs, check claims against them.
-- **DAG evals?** Rubrics as deterministic decision trees instead of one grading prompt. Reproducible, and every decision is on the page.
-- **Hardest part?** Making the judges trustworthy: keeping branching deterministic, isolating untrusted transcript text from judge instructions, and turning a failed judge into a logged error rather than a crashed run.
+RedDial is an adversarial simulation and evaluation harness for conversational agents. LangGraph runs the work as a parallel map-reduce. LangChain handles the models and structured output. A small RAG pipeline grounds the factual checks in the target's own documents. Each rubric is a deterministic decision tree rather than a single grading prompt, so every score is reproducible and you can see where it came from.
+
+The part that took the most care was making the judges trustworthy: keeping the branching deterministic, holding untrusted transcript text away from the judge's own instructions, and turning a failed judge into a logged error instead of a crashed run.
