@@ -33,6 +33,7 @@ program
   .option("--max-concurrency <n>", "max concurrent simulations/judges", "8")
   .option("--kb <dir>", "directory of .md/.txt ground-truth docs (enables groundedness judge)")
   .option("-o, --out <file>", "report output path", "reddial-report.md")
+  .option("--format <fmt>", "report format: md | html | both", "both")
   .action(async (opts) => {
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY is required (personas and judges run on Claude).");
@@ -54,6 +55,7 @@ program
       maxConcurrency: Number(opts.maxConcurrency),
       kbDir: opts.kb,
       out: opts.out,
+      format: opts.format,
     });
 
     console.log(`\nOverall score: ${report.overallScore}/100`);
@@ -64,7 +66,10 @@ program
         .join(" ");
       console.log(`  ${t.scenarioId} [${t.endReason}] ${scores}`);
     }
-    console.log(`\nReport written to ${opts.out}`);
+    const html = opts.out.replace(/\.md$/i, "") + ".html";
+    const wrote =
+      opts.format === "md" ? opts.out : opts.format === "html" ? html : `${opts.out} + ${html}`;
+    console.log(`\nReport written to ${wrote}`);
   });
 
 program

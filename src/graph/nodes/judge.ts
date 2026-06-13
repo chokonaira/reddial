@@ -30,7 +30,7 @@ export function makeJudgeNode(deps: GraphDeps) {
         passed: verdict.passed,
         reasoning: verdict.reason,
         evidence: verdict.evidence,
-        path: verdict.path.map((p) => `${p.label}: ${p.outcome}`),
+        path: verdict.path,
       };
       return { judgeResults: [result] };
     } catch (err) {

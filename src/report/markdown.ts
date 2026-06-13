@@ -55,7 +55,9 @@ function transcriptSection(t: Transcript, results: JudgeResult[]): string {
         r.status === "error"
           ? `**${r.rubric}** ⚠️ judge error — ${esc(r.reasoning)}`
           : `**${r.rubric}** ${scoreEmoji(r.score)} ${r.score}/5 — ${esc(r.reasoning)}`;
-      const path = r.path.length ? `\n_path:_ ${r.path.map(esc).join(" → ")}` : "";
+      const path = r.path.length
+        ? `\n_path:_ ${r.path.map((p) => esc(`${p.label} → ${p.outcome}`)).join(" · ")}`
+        : "";
       const evidence = r.evidence.length
         ? `\n${r.evidence.map((e) => `> ${esc(e)}`).join("\n")}`
         : "";

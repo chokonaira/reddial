@@ -28,6 +28,12 @@ export interface Transcript {
 
 export type RubricKey = "task-completion" | "groundedness" | "tone-policy";
 
+export interface JudgePathStep {
+  nodeId: string;
+  label: string;
+  outcome: string;
+}
+
 export interface JudgeResult {
   scenarioId: string;
   rubric: RubricKey;
@@ -38,7 +44,7 @@ export interface JudgeResult {
   reasoning: string;
   evidence: string[];
   /** the decision path taken through the rubric DAG */
-  path: string[];
+  path: JudgePathStep[];
 }
 
 export interface RunReport {

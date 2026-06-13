@@ -1,4 +1,4 @@
-# Manga Autos — Customer Service Policies
+# Northwind Motors — Customer Service Policies
 
 ## Pricing and discounts
 

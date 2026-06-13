@@ -26,9 +26,18 @@ export interface StepResult {
   decision?: Decision;
 }
 
+export interface DagEdge {
+  label: string;
+  to: string;
+}
+
 export interface DagNode {
   id: string;
   label: string;
+  kind: "rule" | "binary" | "extract" | "leaf";
+  edges: DagEdge[];
+  score?: number;
+  passed?: boolean;
   run(ctx: JudgeContext, state: DagState): Promise<StepResult>;
 }
 

@@ -29,6 +29,7 @@ export const RunConfigSchema = z.object({
     .default(DEFAULT_MODELS),
 
   out: z.string().default("reddial-report.md"),
+  format: z.enum(["md", "html", "both"]).default("both"),
 });
 
 export type RunConfig = z.infer<typeof RunConfigSchema>;

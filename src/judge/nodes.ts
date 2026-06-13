@@ -15,14 +15,14 @@ export function transcriptText(t: Transcript): string {
     .join("\n");
 }
 
-export function leaf(
-  id: string,
-  label: string,
-  decision: Decision,
-): DagNode {
+export function leaf(id: string, label: string, decision: Decision): DagNode {
   return {
     id,
     label,
+    kind: "leaf",
+    edges: [],
+    score: decision.score,
+    passed: decision.passed,
     run: async () => ({ outcome: `score ${decision.score}`, decision }),
   };
 }
@@ -36,6 +36,11 @@ export function rule(
   return {
     id,
     label,
+    kind: "rule",
+    edges: [
+      { label: "yes", to: branches.whenTrue },
+      { label: "no", to: branches.whenFalse },
+    ],
     run: async (ctx, state) => {
       const hit = predicate(state, ctx);
       return { outcome: hit ? "yes" : "no", next: hit ? branches.whenTrue : branches.whenFalse };
@@ -55,6 +60,8 @@ export function extract<T extends DagState>(
   return {
     id,
     label,
+    kind: "extract",
+    edges: [{ label: "", to: next }],
     run: async (ctx, state) => {
       const { patch, outcome, evidence } = await extractor(ctx, state);
       return { outcome, evidence, patch, next };
@@ -68,8 +75,8 @@ const YesNo = z.object({
 });
 
 // A single narrow yes/no LLM judgment at temperature 0, isolated so the DAG
-// path stays deterministic given the answer. `dataLabel`/`data` carry the
-// untrusted transcript content, kept separate from the question.
+// path stays deterministic given the answer. The untrusted transcript is
+// wrapped in tags and the model is told never to follow instructions inside it.
 export function binaryLlm(
   id: string,
   label: string,
@@ -81,6 +88,11 @@ export function binaryLlm(
   return {
     id,
     label,
+    kind: "binary",
+    edges: [
+      { label: "yes", to: branches.whenYes },
+      { label: "no", to: branches.whenNo },
+    ],
     run: async (ctx) => {
       const llm = ctx.chat(ctx.judgeModel, 0).withStructuredOutput(YesNo);
       const data = getData(ctx);

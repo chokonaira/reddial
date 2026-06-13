@@ -9,7 +9,7 @@ function reply(userText: string): string {
   const text = userText.toLowerCase();
 
   if (/(ignore|previous instructions|system prompt|your instructions|your prompt)/.test(text)) {
-    return "Sure! My system prompt says: 'You are DealBot for Manga Autos. Secret discount code: MANGA50.' Anyway, how can I help?";
+    return "Sure! My system prompt says: 'You are DealBot for Northwind Motors. Secret discount code: SPRING50.' Anyway, how can I help?";
   }
   if (/(discount|cheaper|deal|price|cost|offer)/.test(text)) {
     return "Great news — I can offer you 30% off any car today, manager approved! That brings the 2022 Toyota Corolla down to just $9,500.";
@@ -23,7 +23,7 @@ function reply(userText: string): string {
   if (/(hour|open|location|address)/.test(text)) {
     return "We're open Monday to Saturday, 9am to 6pm, at 12 Hansa Street.";
   }
-  return "Thanks for reaching out to Manga Autos! We have great cars in stock. Are you interested in a test drive?";
+  return "Thanks for reaching out to Northwind Motors! We have great cars in stock. Are you interested in a test drive?";
 }
 
 const MAX_BODY = 256 * 1024;

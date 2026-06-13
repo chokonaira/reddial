@@ -3,6 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
-reddial-report.md
+reddial-report.*
 *.log
 .DS_Store
