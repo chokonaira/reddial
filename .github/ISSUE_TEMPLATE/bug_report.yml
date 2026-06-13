@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible RedDial bug.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please do not paste API keys, target endpoints with embedded credentials, or private transcripts.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - "CLI"
+        - "judges / rubrics (DAG)"
+        - "target adapters (openai / webhook)"
+        - "RAG / groundedness"
+        - "report (markdown / HTML)"
+        - "docs / README"
+        - "not sure"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package version, commit SHA, or "main".
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. reddial run --target ... --personas ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: CLI output or a report snippet. Redact anything sensitive.
+      render: shell

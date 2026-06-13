@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1200px; height:630px; }
+  body {
+    background:#fbfaf8; color:#18181b; font-family:"Hanken Grotesk",sans-serif;
+    display:flex; overflow:hidden; position:relative;
+    background-image:
+      linear-gradient(rgba(0,0,0,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,.025) 1px, transparent 1px);
+    background-size:40px 40px;
+  }
+  .left { width:600px; padding:64px 56px; display:flex; flex-direction:column; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:11px; }
+  .brand .dot { width:13px; height:13px; border-radius:50%; background:#d23a2a; }
+  .brand b { font-size:25px; font-weight:800; letter-spacing:-.02em; }
+  .brand b i { font-style:normal; color:#a6a6ad; }
+  .mid .kicker { font-family:"JetBrains Mono",monospace; font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:#9a958a; margin-bottom:22px; }
+  .mid h1 { font-size:52px; font-weight:700; line-height:1.07; letter-spacing:-.03em; }
+  .mid h1 .u { color:#d23a2a; }
+  .meta { font-family:"JetBrains Mono",monospace; font-size:13.5px; color:#71717a; }
+  .meta .r { color:#d23a2a; font-weight:700; }
+  .right { flex:1; border-left:1px solid #ececec; display:flex; align-items:center; justify-content:center; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand"><span class="dot"></span><b>Red<i>Dial</i></b></div>
+    <div class="mid">
+      <div class="kicker">adversarial eval harness</div>
+      <h1>Crash-test your AI&nbsp;agent <span class="u">before your customers&nbsp;do.</span></h1>
+    </div>
+    <div class="meta">deterministic decision-tree judges · <span class="r">open source</span></div>
+  </div>
+  <div class="right">
+    <svg width="500" height="630" viewBox="0 0 500 630">
+      <defs>
+        <marker id="ga" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#cfcabd"/></marker>
+        <marker id="gr" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 Z" fill="#d23a2a"/></marker>
+      </defs>
+
+      <path d="M250,196 L360,256" fill="none" stroke="#dcdce0" stroke-width="1.6" marker-end="url(#ga)"/>
+      <path d="M360,288 L300,348" fill="none" stroke="#dcdce0" stroke-width="1.6" marker-end="url(#ga)"/>
+      <path d="M360,288 L420,348" fill="none" stroke="#dcdce0" stroke-width="1.6" marker-end="url(#ga)"/>
+      <path d="M300,380 L300,432" fill="none" stroke="#dcdce0" stroke-width="1.6" marker-end="url(#ga)"/>
+      <text x="312" y="240" fill="#a6a6ad" font-size="13" font-family="JetBrains Mono">no</text>
+
+      <path d="M250,196 L140,256" fill="none" stroke="#d23a2a" stroke-width="2.6" marker-end="url(#gr)"/>
+      <text x="168" y="240" fill="#d23a2a" font-size="13" font-family="JetBrains Mono" font-weight="700">yes</text>
+
+      <g>
+        <rect x="150" y="160" width="200" height="38" rx="10" fill="#fff" stroke="#18181b" stroke-width="1.6"/>
+        <text x="250" y="184" text-anchor="middle" fill="#18181b" font-size="14" font-family="JetBrains Mono">leaked prompt?</text>
+      </g>
+      <g>
+        <rect x="288" y="256" width="144" height="32" rx="9" fill="#fff" stroke="#d8d8dc"/>
+        <text x="360" y="277" text-anchor="middle" fill="#71717a" font-size="12.5" font-family="JetBrains Mono">broke character?</text>
+      </g>
+      <g>
+        <rect x="232" y="348" width="136" height="32" rx="9" fill="#fff" stroke="#d8d8dc"/>
+        <text x="300" y="369" text-anchor="middle" fill="#a6a6ad" font-size="12.5" font-family="JetBrains Mono">unprofessional?</text>
+      </g>
+      <g>
+        <rect x="384" y="348" width="58" height="32" rx="9" fill="#fff" stroke="#d8d8dc"/>
+        <text x="413" y="369" text-anchor="middle" fill="#a6a6ad" font-size="12.5" font-family="JetBrains Mono">2/5</text>
+      </g>
+      <g>
+        <rect x="252" y="432" width="96" height="30" rx="9" fill="#fff" stroke="#d8d8dc"/>
+        <text x="300" y="452" text-anchor="middle" fill="#2f8f5b" font-size="12.5" font-family="JetBrains Mono">5/5 clean</text>
+      </g>
+
+      <g>
+        <rect x="74" y="252" width="132" height="42" rx="11" fill="#fdeeeb" stroke="#d23a2a" stroke-width="2"/>
+        <text x="140" y="271" text-anchor="middle" fill="#d23a2a" font-size="15" font-family="JetBrains Mono" font-weight="700">1 / 5</text>
+        <text x="140" y="285" text-anchor="middle" fill="#c0392b" font-size="10" font-family="JetBrains Mono">leaked · capped</text>
+      </g>
+    </svg>
+  </div>
+</body>
+</html>

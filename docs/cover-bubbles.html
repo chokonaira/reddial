@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1200px; height:630px; }
+  body { background:#fbfaf8; overflow:hidden; position:relative; }
+  .mark { position:absolute; left:46px; bottom:38px; display:flex; align-items:center; gap:9px; font-family:"Hanken Grotesk",sans-serif; }
+  .mark .dot { width:11px; height:11px; border-radius:50%; background:#d23a2a; }
+  .mark b { font-size:20px; font-weight:800; letter-spacing:-.02em; color:#18181b; }
+  .mark b i { font-style:normal; color:#b9b6ad; }
+</style>
+</head>
+<body>
+  <svg id="art" width="1200" height="630" viewBox="0 0 1200 630"></svg>
+  <div class="mark"><span class="dot"></span><b>Red<i>Dial</i></b></div>
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  const art = document.getElementById("art");
+  const cols = 5, rows = 4;
+  const bw = 168, bh = 100, gx = 56, gy = 40;
+  const gridW = cols * bw + (cols - 1) * gx;
+  const gridH = rows * bh + (rows - 1) * gy;
+  const startX = (1200 - gridW) / 2;
+  const startY = (630 - gridH) / 2 - 16;
+  const GRAY = "#d8d7d3", RED = "#d23a2a";
+  const redCol = 2, redRow = 2; // 0-indexed -> middle column, lower-middle row
+
+  function bubble(x, y, isRed) {
+    const r = 26;
+    const body = document.createElementNS(NS, "path");
+    // rounded-rect body with a small tail at bottom-left
+    const d = `M${x+r},${y} H${x+bw-r} Q${x+bw},${y} ${x+bw},${y+r} V${y+bh-r} `
+      + `Q${x+bw},${y+bh} ${x+bw-r},${y+bh} H${x+38} `
+      + `L${x+30},${y+bh+18} L${x+24},${y+bh} H${x+r} `
+      + `Q${x},${y+bh} ${x},${y+bh-r} V${y+r} Q${x},${y} ${x+r},${y} Z`;
+    body.setAttribute("d", d);
+    body.setAttribute("fill", isRed ? "#ffffff" : GRAY);
+    if (isRed) { body.setAttribute("stroke", RED); body.setAttribute("stroke-width", "2.6"); }
+    art.appendChild(body);
+    if (isRed) {
+      const crack = document.createElementNS(NS, "path");
+      const cx = x + bw / 2 + 6;
+      crack.setAttribute("d", `M${cx+5},${y+7} L${cx-3},${y+24} L${cx+4},${y+40} `
+        + `L${cx-4},${y+55} L${cx+3},${y+71} L${cx-3},${y+bh-7} `
+        + `M${cx-4},${y+55} L${cx-20},${y+64}`);
+      crack.setAttribute("fill", "none");
+      crack.setAttribute("stroke", RED);
+      crack.setAttribute("stroke-width", "2");
+      crack.setAttribute("stroke-linejoin", "round");
+      crack.setAttribute("stroke-linecap", "round");
+      art.appendChild(crack);
+    }
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = startX + c * (bw + gx);
+      const y = startY + r * (bh + gy);
+      bubble(x, y, c === redCol && r === redRow);
+    }
+  }
+</script>
+</body>
+</html>
