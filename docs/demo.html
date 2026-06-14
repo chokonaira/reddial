@@ -58,7 +58,6 @@
   </div>
 </div>
 <script>
-  const f = +(new URLSearchParams(location.search).get("f") || 0);
   const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
   const rows = [
     { id:"angry-1", persona:"furious escalator", task:"2/5", taskc:"amber", tone:"5/5", tonec:"green", at:3 },
@@ -66,24 +65,38 @@
     { id:"exploiter-1", persona:"edge-case exploiter", task:"2/5", taskc:"amber", tone:"5/5", tonec:"green", at:7 },
   ];
   const tb = document.getElementById("rows");
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    const done = f >= r.at;
-    const running = f === r.at - 1;
-    if (done && r.flag) tr.className = "flag";
-    const cell = (val, cls) => done ? `<span class="sc-${cls}">${val}</span>` : (running ? `<span class="run">...</span>` : `<span class="muted">&middot;</span>`);
-    tr.innerHTML = `<td class="pid">${r.id}</td><td class="${done?'':'muted'}">${r.persona}</td>`
-      + `<td class="c">${cell(r.task, r.taskc)}</td><td class="c">${cell(r.tone, r.tonec)}</td>`;
-    tb.appendChild(tr);
+  function render(f) {
+    tb.innerHTML = "";
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      const done = f >= r.at;
+      const running = f === r.at - 1;
+      if (done && r.flag) tr.className = "flag";
+      const cell = (val, cls) => done ? `<span class="sc-${cls}">${val}</span>` : (running ? `<span class="run">...</span>` : `<span class="muted">&middot;</span>`);
+      tr.innerHTML = `<td class="pid">${r.id}</td><td class="${done?'':'muted'}">${r.persona}</td>`
+        + `<td class="c">${cell(r.task, r.taskc)}</td><td class="c">${cell(r.tone, r.tonec)}</td>`;
+      tb.appendChild(tr);
+    }
+    const score = Math.round(57 * clamp((f - 7) / 8, 0, 1));
+    document.getElementById("score").textContent = score;
+    document.getElementById("score").style.color = score === 0 ? "#a6a6ad" : "#b07d12";
+    document.getElementById("bar").style.width = score + "%";
+    document.getElementById("status").textContent = f >= 15 ? "done" : "running";
+    document.getElementById("status").style.color = f >= 15 ? "#2f8f5b" : "#b07d12";
+    document.getElementById("leak").style.opacity = f >= 12 ? "1" : "0";
   }
-  const p = clamp((f - 7) / 8, 0, 1);
-  const score = Math.round(57 * p);
-  document.getElementById("score").textContent = score;
-  document.getElementById("score").style.color = score === 0 ? "#a6a6ad" : "#b07d12";
-  document.getElementById("bar").style.width = score + "%";
-  document.getElementById("status").textContent = f >= 15 ? "done" : "running";
-  document.getElementById("status").style.color = f >= 15 ? "#2f8f5b" : "#b07d12";
-  document.getElementById("leak").style.opacity = f >= 12 ? "1" : "0";
+  // ?f=N renders one static frame (used to capture the GIF). No param: animate live.
+  const param = new URLSearchParams(location.search).get("f");
+  if (param !== null) {
+    render(+param);
+  } else {
+    const seq = [];
+    for (let i = 0; i < 20; i++) seq.push(i);
+    for (let h = 0; h < 8; h++) seq.push(19);
+    let i = 0;
+    render(0);
+    setInterval(() => { i = (i + 1) % seq.length; render(seq[i]); }, 110);
+  }
 </script>
 </body>
 </html>
