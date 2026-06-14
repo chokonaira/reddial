@@ -54,7 +54,7 @@
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
     "test": "vitest run",
     "prepack": "npm run build",
-    "prepublishOnly": "node -e \"if (!process.env.CI) { console.error('Direct npm publish is disabled. Bump the version, push, then run: gh release create vX.Y.Z. CI publishes to npm. See docs/RELEASING.md.'); process.exit(1); }\""
+    "postpublish": "node scripts/sync-release.mjs"
   },
   "engines": {
     "node": ">=20"

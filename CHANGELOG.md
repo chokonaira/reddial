@@ -6,7 +6,7 @@ All notable changes to RedDial are documented here. The project follows semantic
 
 ### Changed
 
-- Release tooling: the npm publish workflow now skips versions already on the registry, and direct `npm publish` is disabled outside CI so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
+- Release tooling: the npm publish workflow now skips versions already on the registry, and a `postpublish` hook auto-creates the matching GitHub release after a manual `npm publish`, so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## 0.1.3 - 2026-06-13
 
