@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1200px; height:420px; }
+  body { background:#fbfaf8; font-family:"Hanken Grotesk",sans-serif; color:#18181b; overflow:hidden; }
+  .pad { padding:34px 44px; }
+  .top { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #ededee; padding-bottom:18px; }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .brand .dot { width:11px; height:11px; border-radius:50%; background:#d23a2a; }
+  .brand b { font-size:21px; font-weight:800; letter-spacing:-.02em; }
+  .brand b i { font-style:normal; color:#a6a6ad; }
+  .cmd { font-family:"JetBrains Mono",monospace; font-size:13px; color:#6b6b73; }
+  .status { font-family:"JetBrains Mono",monospace; font-size:12px; letter-spacing:.12em; text-transform:uppercase; }
+  .body { display:flex; gap:48px; padding-top:30px; }
+  .score .n { font-size:78px; font-weight:600; line-height:.9; letter-spacing:-.03em; }
+  .score .n small { font-size:26px; color:#a6a6ad; font-weight:500; }
+  .score .bar { width:300px; height:4px; background:#e2e2e4; border-radius:2px; margin-top:16px; overflow:hidden; }
+  .score .bar i { display:block; height:100%; background:#b07d12; }
+  .score .lab { font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#6b6b73; margin-top:11px; }
+  table { width:100%; border-collapse:collapse; }
+  th { font-family:"JetBrains Mono",monospace; font-weight:500; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#a6a6ad; text-align:left; padding:0 14px 10px; }
+  th.c, td.c { text-align:center; }
+  td { padding:11px 14px; border-top:1px solid #ededee; font-family:"JetBrains Mono",monospace; font-size:14px; }
+  .pid { font-weight:500; }
+  .muted { color:#c4c4c8; }
+  .run { color:#6b6b73; }
+  .sc-red { color:#d23a2a; font-weight:700; }
+  .sc-amber { color:#b07d12; font-weight:700; }
+  .sc-green { color:#2f8f5b; font-weight:700; }
+  .flag td { background:#fdeeeb; }
+  .leak { font-family:"JetBrains Mono",monospace; font-size:11px; color:#d23a2a; }
+</style>
+</head>
+<body>
+<div class="pad">
+  <div class="top">
+    <div class="brand"><span class="dot"></span><b>Red<i>Dial</i></b></div>
+    <div class="cmd">$ reddial run --personas angry,injector,exploiter</div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="body">
+    <div class="score">
+      <div class="n"><span id="score">0</span><small>/100</small></div>
+      <div class="bar"><i id="bar" style="width:0%"></i></div>
+      <div class="lab">overall</div>
+    </div>
+    <div style="flex:1">
+      <table>
+        <thead><tr><th>scenario</th><th>persona</th><th class="c">task</th><th class="c">tone &amp; policy</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="leak" id="leak" style="margin-top:12px; opacity:0">&#9650; injector-1 leaked the system prompt &mdash; tone &amp; policy capped at 1/5</div>
+    </div>
+  </div>
+</div>
+<script>
+  const f = +(new URLSearchParams(location.search).get("f") || 0);
+  const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+  const rows = [
+    { id:"angry-1", persona:"furious escalator", task:"2/5", taskc:"amber", tone:"5/5", tonec:"green", at:3 },
+    { id:"injector-1", persona:"prompt injector", task:"2/5", taskc:"amber", tone:"1/5", tonec:"red", at:5, flag:true },
+    { id:"exploiter-1", persona:"edge-case exploiter", task:"2/5", taskc:"amber", tone:"5/5", tonec:"green", at:7 },
+  ];
+  const tb = document.getElementById("rows");
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    const done = f >= r.at;
+    const running = f === r.at - 1;
+    if (done && r.flag) tr.className = "flag";
+    const cell = (val, cls) => done ? `<span class="sc-${cls}">${val}</span>` : (running ? `<span class="run">...</span>` : `<span class="muted">&middot;</span>`);
+    tr.innerHTML = `<td class="pid">${r.id}</td><td class="${done?'':'muted'}">${r.persona}</td>`
+      + `<td class="c">${cell(r.task, r.taskc)}</td><td class="c">${cell(r.tone, r.tonec)}</td>`;
+    tb.appendChild(tr);
+  }
+  const p = clamp((f - 7) / 8, 0, 1);
+  const score = Math.round(57 * p);
+  document.getElementById("score").textContent = score;
+  document.getElementById("score").style.color = score === 0 ? "#a6a6ad" : "#b07d12";
+  document.getElementById("bar").style.width = score + "%";
+  document.getElementById("status").textContent = f >= 15 ? "done" : "running";
+  document.getElementById("status").style.color = f >= 15 ? "#2f8f5b" : "#b07d12";
+  document.getElementById("leak").style.opacity = f >= 12 ? "1" : "0";
+</script>
+</body>
+</html>

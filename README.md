@@ -11,7 +11,7 @@ You tested your support agent by chatting with it politely, and it behaved. Real
 
 RedDial automates the hard conversations. A squad of adversarial personas probes your agent in parallel. A panel of auditable decision-tree judges then grades every transcript and writes a report card, including a groundedness judge that checks the agent's claims against passages retrieved from your own business docs. You see the failures before your users do.
 
-![RedDial HTML report showing scores, decision paths, and transcript evidence](https://raw.githubusercontent.com/chokonaira/reddial/main/docs/report.png)
+![RedDial running: adversarial personas graded into a report, the injector leak flagged](https://raw.githubusercontent.com/chokonaira/reddial/main/docs/demo.gif)
 
 ## What it catches
 
