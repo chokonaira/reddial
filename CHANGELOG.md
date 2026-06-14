@@ -2,7 +2,17 @@
 
 All notable changes to RedDial are documented here. The project follows semantic versioning while the public API is pre-1.0, so minor releases may still include clearly documented breaking changes.
 
-## 0.1.2 - Unreleased
+## Unreleased
+
+### Changed
+
+- Release tooling: the npm publish workflow now skips versions already on the registry, and direct `npm publish` is disabled outside CI so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
+
+## 0.1.3 - 2026-06-13
+
+Maintenance release. No functional or API changes from 0.1.2.
+
+## 0.1.2 - 2026-06-13
 
 ### Added
 

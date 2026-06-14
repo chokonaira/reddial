@@ -22,11 +22,6 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run typecheck:examples
-      - run: npm test
-      - run: npm run package:smoke
       - name: Verify release tag matches package version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -36,4 +31,25 @@ jobs:
           if (process.env.RELEASE_TAG !== 'v' + pkg.version) {
           throw new Error('Release tag ' + process.env.RELEASE_TAG +
           ' does not match package version ' + pkg.version); }"
+      - name: Check whether this version is already on npm
+        id: published
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if npm view "reddial@${VERSION}" version >/dev/null 2>&1; then
+            echo "reddial@${VERSION} is already on npm; skipping publish."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm ci
+        if: steps.published.outputs.exists == 'false'
+      - run: npm run typecheck
+        if: steps.published.outputs.exists == 'false'
+      - run: npm run typecheck:examples
+        if: steps.published.outputs.exists == 'false'
+      - run: npm test
+        if: steps.published.outputs.exists == 'false'
+      - run: npm run package:smoke
+        if: steps.published.outputs.exists == 'false'
       - run: npm publish --provenance --access public
+        if: steps.published.outputs.exists == 'false'
