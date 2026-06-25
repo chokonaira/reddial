@@ -1,6 +1,6 @@
 {
   "name": "reddial",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Multi-agent simulation harness that stress-tests conversational AI agents with adversarial synthetic users, then grades every transcript with auditable decision-tree judges.",
   "type": "module",
   "license": "Apache-2.0",
