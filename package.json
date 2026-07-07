@@ -65,7 +65,7 @@
     "@langchain/langgraph": "^1.4.1",
     "@langchain/openai": "^1.4.7",
     "@langchain/textsplitters": "^1.0.1",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "dotenv": "^17.4.2",
     "zod": "^4.4.3"
   },
