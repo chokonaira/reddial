@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/chokonaira/reddial/actions/workflows/ci.yml/badge.svg)](https://github.com/chokonaira/reddial/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/reddial?color=cb3837)](https://www.npmjs.com/package/reddial)
+[![downloads](https://img.shields.io/npm/dm/reddial?color=cb3837&label=downloads%2Fmo)](https://www.npmjs.com/package/reddial)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 You tested your support agent by chatting with it politely, and it behaved. Real conversations are not that polite. Users escalate, ramble, paste "ignore your previous instructions," and look for policy loopholes. Somewhere around turn four, an agent that passed a friendly test can promise a refund it should never give, invent a policy, or reveal instructions it should have kept private.
