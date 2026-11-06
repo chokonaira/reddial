@@ -6,7 +6,7 @@ import type { RunReport } from "../../types.js";
 import type { GraphDeps } from "../deps.js";
 import type { RunStateType, RunStateUpdate } from "../state.js";
 
-function htmlPath(out: string): string {
+export function htmlPath(out: string): string {
   return out.replace(/\.md$/i, "") + ".html";
 }
 

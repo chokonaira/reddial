@@ -155,7 +155,7 @@ npx reddial replay reddial-regressions.json --target https://my-agent.example.co
 1/2 passed
 ```
 
-Replay sends the same customer messages in the same order, skips scenario generation, and grades each case only on the rubrics it was pinned for. Reports go to `reddial-replay.md` and `reddial-replay.html`, so your last run report stays in place. Cases pinned for `groundedness` need the same `--kb` directory on replay.
+Replay sends the same customer messages in the same order, skips scenario generation, and grades each case only on the rubrics it was pinned for. Reports go to `reddial-replay.md` and `reddial-replay.html`, so your last run report stays in place. Cases pinned for `groundedness` need the same `--kb` directory on replay. A run or replay stops before it contacts your agent if a report path cannot be written or would overwrite the suite.
 
 The command exits with code 1 unless every case passes, so it can gate a CI job. A case is inconclusive, and still fails the job, when the agent errors, returns an empty reply, or a judge cannot give a verdict. A conversation that ended in a target or persona error is never pinned, and a run with no failures writes no file.
 

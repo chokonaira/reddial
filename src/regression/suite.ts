@@ -4,13 +4,14 @@ import {
   constants,
   mkdir,
   readFile,
+  readlink,
   realpath,
   rename,
   rm,
   stat,
   writeFile,
 } from "node:fs/promises";
-import { dirname } from "node:path";
+import { basename, dirname, isAbsolute, join, sep } from "node:path";
 import { z } from "zod";
 import type { RunReport, Transcript } from "../types.js";
 
@@ -105,21 +106,69 @@ export async function loadSuite(path: string): Promise<RegressionSuite> {
   return suite;
 }
 
-// Checked before a run starts, so its results cannot be lost at the very end.
-export async function ensureWritableParent(path: string): Promise<void> {
+// realpath gives up on a dangling symlink, but a write through one lands on its target.
+async function resolveTarget(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch (err) {
+    // ".." cannot be resolved over a missing folder, and the OS refuses it too.
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" || basename(path) === "..") throw err;
+  }
+  const entry = join(await resolveTarget(dirname(path)), basename(path));
+  const link = await readlink(entry).catch(() => null);
+  if (link === null) return entry;
+  // Kept unnormalized: ".." has to apply after a symlinked folder is followed.
+  return resolveTarget(isAbsolute(link) ? link : `${dirname(entry)}/${link}`);
+}
+
+// The inode check catches hard links and another casing on a case-insensitive disk.
+async function collides(report: string, suitePath: string): Promise<boolean> {
+  const a = await resolveTarget(report);
+  const b = await resolveTarget(suitePath);
+  if (a === b || a.startsWith(`${b}${sep}`) || b.startsWith(`${a}${sep}`)) return true;
+  const [first, second] = await Promise.all([
+    stat(report).catch(() => null),
+    stat(suitePath).catch(() => null),
+  ]);
+  return first !== null && second !== null && first.dev === second.dev && first.ino === second.ino;
+}
+
+async function ensureWritableParent(path: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await access(dirname(path), constants.W_OK);
 }
 
+// Reports are rewritten in place, so an existing one needs write access itself.
+async function ensureWritableReport(path: string): Promise<void> {
+  if (/\/\.?$/.test(path.replaceAll(sep, "/"))) {
+    throw new Error(`Report path is a directory: ${path}`);
+  }
+  const target = await resolveTarget(path);
+  const existing = await stat(target).catch(() => null);
+  if (existing?.isDirectory()) throw new Error(`Report path is a directory: ${path}`);
+  if (existing) await access(target, constants.W_OK);
+  else await ensureWritableParent(target);
+}
+
+// Checked before a run starts, so its results cannot be lost at the very end.
+export async function prepareReports(reports: string[], suitePath?: string): Promise<void> {
+  for (const report of reports) {
+    if (suitePath && (await collides(report, suitePath))) {
+      throw new Error(`Report path ${report} collides with regression suite ${suitePath}`);
+    }
+    await ensureWritableReport(report);
+  }
+}
+
 export async function prepareSuitePath(path: string): Promise<void> {
   await loadSuiteIfPresent(path);
-  await ensureWritableParent(path);
+  await ensureWritableParent(await resolveTarget(path));
 }
 
 // Temp file then rename, so a failed write cannot damage the suite on disk.
 async function writeSuite(path: string, suite: RegressionSuite): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
-  const target = await realpath(path).catch(() => path);
+  const target = await resolveTarget(path);
+  await mkdir(dirname(target), { recursive: true });
   const mode = (await stat(target).catch(() => null))?.mode;
   const temp = `${target}.${randomUUID()}.tmp`;
   try {

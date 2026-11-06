@@ -1,5 +1,6 @@
 import {
   chmod,
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -11,7 +12,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { AIMessage } from "@langchain/core/messages";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatFactory } from "../src/llm.js";
@@ -20,6 +21,7 @@ import {
   failingCases,
   loadSuite,
   pinFailures,
+  prepareReports,
   prepareSuitePath,
   type RegressionCase,
   type RegressionSuite,
@@ -287,6 +289,53 @@ describe("pinFailures", () => {
     expect((await readdir(dir)).sort()).toEqual(["link.json", "real.json"]);
   });
 
+  it("writes through a dangling symlink to where it points", async () => {
+    const real = join(dir, "suites", "real.json");
+    const dangling = join(dir, "link.json");
+    await symlink(real, dangling);
+    await pinFailures(failing, dangling);
+    expect((await lstat(dangling)).isSymbolicLink()).toBe(true);
+    expect((await loadSuite(real)).cases.length).toBe(1);
+  });
+
+  it("resolves a relative symlink from its own folder", async () => {
+    await mkdir(join(dir, "links"));
+    const dangling = join(dir, "links", "link.json");
+    await symlink("real.json", dangling);
+    await pinFailures(failing, dangling);
+    expect((await loadSuite(join(dir, "links", "real.json"))).cases.length).toBe(1);
+  });
+
+  it("follows .. in a symlink through a symlinked folder", async () => {
+    const deep = join(dir, "other", "deep");
+    await mkdir(deep, { recursive: true });
+    await symlink(deep, join(dir, "sub"));
+    const bystander = join(dir, "real.json");
+    await writeFile(bystander, "not a suite", "utf-8");
+    await symlink("sub/../real.json", join(dir, "suite.json"));
+
+    await pinFailures(failing, join(dir, "suite.json"));
+
+    expect(await readFile(bystander, "utf-8")).toBe("not a suite");
+    expect((await loadSuite(join(dir, "other", "real.json"))).cases.length).toBe(1);
+  });
+
+  it("keeps the saved cases when the path climbs out of a missing folder", async () => {
+    const path = join(dir, "suite.json");
+    const saved = JSON.stringify(suiteOf(pinned()));
+    await writeFile(path, saved, "utf-8");
+    await expect(pinFailures(failing, `${dir}/missing/../suite.json`)).rejects.toThrow();
+    expect(await readFile(path, "utf-8")).toBe(saved);
+  });
+
+  it("leaves a file alone when a symlink climbs out of a missing folder", async () => {
+    const bystander = join(dir, "real.json");
+    await writeFile(bystander, "not a suite", "utf-8");
+    await symlink("missing/../real.json", join(dir, "suite.json"));
+    await expect(pinFailures(failing, join(dir, "suite.json"))).rejects.toThrow();
+    expect(await readFile(bystander, "utf-8")).toBe("not a suite");
+  });
+
   it("refuses to overwrite a suite it cannot read", async () => {
     const path = join(dir, "suite.json");
     await writeFile(path, "{ not json", "utf-8");
@@ -338,6 +387,182 @@ describe("prepareSuitePath", () => {
     const path = join(dir, "suite.json");
     await writeFile(path, "{ not json", "utf-8");
     await expect(prepareSuitePath(path)).rejects.toThrow(/suite\.json/);
+  });
+
+  it("stops on a path that climbs out of a missing folder", async () => {
+    await writeFile(join(dir, "suite.json"), "{}", "utf-8");
+    await expect(prepareSuitePath(`${dir}/missing/../suite.json`)).rejects.toThrow();
+  });
+
+  it("stops on a symlink that only loops once .. is collapsed", async () => {
+    await symlink("missing/../loop.json", join(dir, "loop.json"));
+    await expect(prepareSuitePath(join(dir, "loop.json"))).rejects.toThrow();
+  });
+
+  it.skipIf(process.getuid?.() === 0)("checks the directory a symlink points into", async () => {
+    const locked = join(dir, "locked");
+    await mkdir(locked, { mode: 0o500 });
+    const dangling = join(dir, "link.json");
+    await symlink(join(locked, "suite.json"), dangling);
+    await expect(prepareSuitePath(dangling)).rejects.toThrow();
+  });
+});
+
+describe("prepareReports", () => {
+  it("rejects a directory at a report path", async () => {
+    const path = join(dir, "report.md");
+    await mkdir(path);
+    await expect(prepareReports([path])).rejects.toThrow(/report\.md/);
+  });
+
+  it("rejects a path that names a folder, without creating it", async () => {
+    await expect(prepareReports([`${dir}/reports/`])).rejects.toThrow(/reports/);
+    await expect(prepareReports([`${dir}/reports/.`])).rejects.toThrow(/reports/);
+    expect(await readdir(dir)).toEqual([]);
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    "checks the folder a dangling report symlink points into",
+    async () => {
+      const locked = join(dir, "locked");
+      await mkdir(locked, { mode: 0o500 });
+      const report = join(dir, "report.md");
+      await symlink(join(locked, "report.md"), report);
+      await expect(prepareReports([report])).rejects.toThrow();
+    },
+  );
+
+  it("checks every destination", async () => {
+    const html = join(dir, "report.html");
+    await mkdir(html);
+    await expect(prepareReports([join(dir, "report.md"), html])).rejects.toThrow(/report\.html/);
+  });
+
+  it("creates the parent directory of a new report", async () => {
+    const path = join(dir, "reports", "report.md");
+    await prepareReports([path]);
+    await writeFile(path, "ok", "utf-8");
+  });
+
+  it.skipIf(process.getuid?.() === 0)("rejects an existing report it cannot write to", async () => {
+    const path = join(dir, "report.md");
+    await writeFile(path, "old", { mode: 0o400 });
+    await expect(prepareReports([path])).rejects.toThrow(/report\.md/);
+  });
+
+  it.skipIf(process.getuid?.() === 0)("rejects a new report in a locked directory", async () => {
+    const locked = join(dir, "locked");
+    await mkdir(locked, { mode: 0o500 });
+    await expect(prepareReports([join(locked, "report.md")])).rejects.toThrow();
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    "allows a writable report in a locked directory, which is rewritten in place",
+    async () => {
+      const locked = join(dir, "locked");
+      await mkdir(locked);
+      const path = join(locked, "report.md");
+      await writeFile(path, "old", "utf-8");
+      await chmod(locked, 0o500);
+      await prepareReports([path]).finally(() => chmod(locked, 0o700));
+    },
+  );
+
+  it("allows a report next to the suite", async () => {
+    await prepareReports([join(dir, "report.md")], join(dir, "suite.json"));
+  });
+
+  it("allows a suite and report that only share a name prefix", async () => {
+    await prepareReports([join(dir, "suite-2", "report.md")], join(dir, "suite"));
+    await prepareReports([join(dir, "report")], join(dir, "report-2", "suite.json"));
+  });
+
+  it("leaves casing to the disk, which may keep the two names apart", async () => {
+    await prepareReports([join(dir, "Suite.json")], join(dir, "suite.json"));
+  });
+
+  it.skipIf(sep !== "/")("allows a backslash in a file name where it is not a separator", async () => {
+    await prepareReports([`${dir}/report\\`]);
+  });
+
+  it("stops on a report path that climbs out of a missing folder", async () => {
+    await expect(prepareReports([`${dir}/missing/../report.md`])).rejects.toThrow();
+  });
+
+  describe("with a report that is really the suite", () => {
+    const rejected = /collides with regression suite/;
+
+    it("rejects the same path", async () => {
+      const suite = join(dir, "suite.json");
+      await expect(prepareReports([suite], suite)).rejects.toThrow(rejected);
+    });
+
+    it("rejects a suite that is the second destination", async () => {
+      const suite = join(dir, "suite.json");
+      await expect(prepareReports([join(dir, "r.md"), suite], suite)).rejects.toThrow(rejected);
+    });
+
+    it("rejects a different spelling of the path", async () => {
+      await mkdir(join(dir, "sub"));
+      const spelled = `${dir}/sub/../suite.json`;
+      await expect(prepareReports([spelled], join(dir, "suite.json"))).rejects.toThrow(rejected);
+    });
+
+    it("rejects a symlink to the suite", async () => {
+      const suite = join(dir, "suite.json");
+      const report = join(dir, "report.md");
+      await writeFile(suite, "{}", "utf-8");
+      await symlink(suite, report);
+      await expect(prepareReports([report], suite)).rejects.toThrow(rejected);
+    });
+
+    it("rejects a symlink to a suite that does not exist yet", async () => {
+      const suite = join(dir, "suite.json");
+      const report = join(dir, "report.md");
+      await symlink(suite, report);
+      await expect(prepareReports([report], suite)).rejects.toThrow(rejected);
+    });
+
+    it("rejects a symlink written with .. through a symlinked folder", async () => {
+      const deep = join(dir, "other", "deep");
+      await mkdir(deep, { recursive: true });
+      await symlink(deep, join(dir, "sub"));
+      const suite = join(dir, "other", "suite.json");
+      const report = join(dir, "report.md");
+      await writeFile(suite, "{}", "utf-8");
+      await symlink("sub/../suite.json", report);
+      await expect(prepareReports([report], suite)).rejects.toThrow(rejected);
+    });
+
+    it("rejects a new file reached through a symlinked folder", async () => {
+      await mkdir(join(dir, "real"));
+      await symlink(join(dir, "real"), join(dir, "linked"));
+      const report = join(dir, "linked", "suite.json");
+      await expect(prepareReports([report], join(dir, "real", "suite.json"))).rejects.toThrow(
+        rejected,
+      );
+    });
+
+    it("rejects a report file where the suite needs a folder", async () => {
+      const report = join(dir, "data");
+      await expect(prepareReports([report], join(dir, "data", "suite.json"))).rejects.toThrow(
+        rejected,
+      );
+    });
+
+    it("rejects a report inside a path the suite needs as a file", async () => {
+      const suite = join(dir, "suite.json");
+      await expect(prepareReports([join(suite, "report.md")], suite)).rejects.toThrow(rejected);
+      expect(await readdir(dir)).toEqual([]);
+    });
+
+    it("rejects a hard link to the suite", async () => {
+      const suite = join(dir, "suite.json");
+      const report = join(dir, "report.md");
+      await writeFile(suite, "{}", "utf-8");
+      await link(suite, report);
+      await expect(prepareReports([report], suite)).rejects.toThrow(rejected);
+    });
   });
 });
 

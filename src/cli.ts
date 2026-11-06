@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { Command, type OptionValues } from "commander";
+import { htmlPath } from "./graph/nodes/reporter.js";
 import { PERSONAS } from "./personas/presets.js";
 import { replay, type ReplayStatus } from "./regression/replay.js";
 import {
-  ensureWritableParent,
   loadSuite,
   pinFailures,
+  prepareReports,
   prepareSuitePath,
 } from "./regression/suite.js";
 import { run } from "./run.js";
@@ -57,11 +58,13 @@ function targetConfig(opts: OptionValues) {
   };
 }
 
+function reportPaths(opts: OptionValues): string[] {
+  const html = htmlPath(opts.out);
+  return opts.format === "md" ? [opts.out] : opts.format === "html" ? [html] : [opts.out, html];
+}
+
 function logReportPath(opts: OptionValues): void {
-  const html = opts.out.replace(/\.md$/i, "") + ".html";
-  const wrote =
-    opts.format === "md" ? opts.out : opts.format === "html" ? html : `${opts.out} + ${html}`;
-  console.log(`\nReport written to ${wrote}`);
+  console.log(`\nReport written to ${reportPaths(opts).join(" + ")}`);
 }
 
 const program = new Command();
@@ -85,7 +88,7 @@ withTargetOptions(program.command("run"), "reddial-report.md")
   .option("--save-failures <file>", "pin failing conversations to a regression suite file")
   .action(async (opts) => {
     requireKeys(opts);
-    await ensureWritableParent(opts.out);
+    await prepareReports(reportPaths(opts), opts.saveFailures);
     if (opts.saveFailures) await prepareSuitePath(opts.saveFailures);
 
     const report = await run({
@@ -116,8 +119,8 @@ withTargetOptions(program.command("replay"), "reddial-replay.md")
   .argument("<suite>", "suite file written by run --save-failures")
   .action(async (suitePath: string, opts) => {
     requireKeys(opts);
-    await ensureWritableParent(opts.out);
     const suite = await loadSuite(suitePath);
+    await prepareReports(reportPaths(opts), suitePath);
     const { cases, passed } = await replay(suite, targetConfig(opts));
 
     console.log("");
