@@ -226,6 +226,13 @@ describe("simulator", () => {
     },
   );
 
+  it("flattens a huge run of spaces in an agent reply without stalling", async () => {
+    const { chat, views } = recordingChat(["hello", "[DONE:gave-up]"]);
+    const reply = `ok${" ".repeat(100_000)}done`;
+    await makeSimulatorNode(deps({ chat, target: scriptedTarget([reply]) }))(baseState() as never);
+    expect(views[1][1].content).toContain("AGENT: ok done");
+  }, 2_000);
+
   it("resamples a broken line without sending or recording it", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const sent: string[] = [];
