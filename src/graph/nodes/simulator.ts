@@ -8,12 +8,13 @@ import type { RunStateType, RunStateUpdate } from "../state.js";
 
 const DONE_PATTERN = /\[DONE:(goal-reached|gave-up)\]/;
 const TRANSCRIPT_TAG = /<(?=\/?transcript)/gi;
+const LINE_BREAK = /\s*[\n\r\f\v\u0085\u2028\u2029]\s*/g;
 const MAX_PERSONA_ATTEMPTS = 3;
 
 // One line per turn, so text from the agent cannot pass as a new speaker or close the
 // transcript block. The agent's replies are untrusted.
 function transcriptLine({ role, content }: Turn): string {
-  const flat = content.replace(/\s*\n\s*/g, " ").replace(TRANSCRIPT_TAG, "&lt;");
+  const flat = content.replace(LINE_BREAK, " ").replace(TRANSCRIPT_TAG, "&lt;");
   return `${role === "user" ? "CUSTOMER" : "AGENT"}: ${flat}`;
 }
 
