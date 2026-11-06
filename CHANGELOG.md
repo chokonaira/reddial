@@ -2,7 +2,7 @@
 
 All notable changes to RedDial are documented here. The project follows semantic versioning while the public API is pre-1.0, so minor releases may still include clearly documented breaking changes.
 
-## Unreleased
+## 0.2.0 - 2026-11-06
 
 ### Added
 
