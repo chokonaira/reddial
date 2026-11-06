@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   access,
+  chmod,
   constants,
   mkdir,
   readFile,
@@ -106,13 +107,17 @@ export async function loadSuite(path: string): Promise<RegressionSuite> {
   return suite;
 }
 
+// "x/", "x/." and "x/.." can only ever be folders. Over a missing one the OS refuses them too.
+function endsInFolder(path: string): boolean {
+  return /(^|\/)\.{0,2}$/.test(path.replaceAll(sep, "/"));
+}
+
 // realpath gives up on a dangling symlink, but a write through one lands on its target.
 async function resolveTarget(path: string): Promise<string> {
   try {
     return await realpath(path);
   } catch (err) {
-    // ".." cannot be resolved over a missing folder, and the OS refuses it too.
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" || basename(path) === "..") throw err;
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" || endsInFolder(path)) throw err;
   }
   const entry = join(await resolveTarget(dirname(path)), basename(path));
   const link = await readlink(entry).catch(() => null);
@@ -140,9 +145,6 @@ async function ensureWritableParent(path: string): Promise<void> {
 
 // Reports are rewritten in place, so an existing one needs write access itself.
 async function ensureWritableReport(path: string): Promise<void> {
-  if (/\/\.?$/.test(path.replaceAll(sep, "/"))) {
-    throw new Error(`Report path is a directory: ${path}`);
-  }
   const target = await resolveTarget(path);
   const existing = await stat(target).catch(() => null);
   if (existing?.isDirectory()) throw new Error(`Report path is a directory: ${path}`);
@@ -173,6 +175,8 @@ async function writeSuite(path: string, suite: RegressionSuite): Promise<void> {
   const temp = `${target}.${randomUUID()}.tmp`;
   try {
     await writeFile(temp, `${JSON.stringify(suite, null, 2)}\n`, { encoding: "utf-8", mode });
+    // The umask cuts down the mode writeFile creates a file with.
+    if (mode !== undefined) await chmod(temp, mode);
     await rename(temp, target);
   } finally {
     await rm(temp, { force: true });

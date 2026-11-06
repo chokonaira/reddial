@@ -278,6 +278,19 @@ describe("pinFailures", () => {
     expect((await stat(path)).mode & 0o777).toBe(0o400);
   });
 
+  it("keeps write access the umask would take away", async () => {
+    const path = join(dir, "suite.json");
+    await writeFile(path, JSON.stringify(suiteOf(pinned())), "utf-8");
+    await chmod(path, 0o666);
+    await pinFailures(failing, path);
+    expect((await stat(path)).mode & 0o777).toBe(0o666);
+  });
+
+  it("refuses a suite path that names a folder", async () => {
+    await expect(pinFailures(failing, `${dir}/suite.json/`)).rejects.toThrow(/suite\.json/);
+    expect(await readdir(dir)).toEqual([]);
+  });
+
   it("writes through a symlink and leaves no temp file behind", async () => {
     const real = join(dir, "real.json");
     const link = join(dir, "link.json");
@@ -389,6 +402,11 @@ describe("prepareSuitePath", () => {
     await expect(prepareSuitePath(path)).rejects.toThrow(/suite\.json/);
   });
 
+  it("stops on a path that names a folder", async () => {
+    await expect(prepareSuitePath(`${dir}/suite.json/`)).rejects.toThrow(/suite\.json/);
+    await expect(prepareSuitePath(`${dir}/suite.json/.`)).rejects.toThrow(/suite\.json/);
+  });
+
   it("stops on a path that climbs out of a missing folder", async () => {
     await writeFile(join(dir, "suite.json"), "{}", "utf-8");
     await expect(prepareSuitePath(`${dir}/missing/../suite.json`)).rejects.toThrow();
@@ -431,6 +449,12 @@ describe("prepareReports", () => {
       await expect(prepareReports([report])).rejects.toThrow();
     },
   );
+
+  it("rejects a symlink to a folder that does not exist", async () => {
+    const report = join(dir, "report.md");
+    await symlink("gone/", report);
+    await expect(prepareReports([report])).rejects.toThrow(/gone/);
+  });
 
   it("checks every destination", async () => {
     const html = join(dir, "report.html");
