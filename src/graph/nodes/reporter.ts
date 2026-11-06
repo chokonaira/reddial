@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { renderHtmlReport } from "../../report/html.js";
 import { overallScore, renderReport } from "../../report/markdown.js";
+import { redactUrl } from "../../report/redact.js";
 import type { RunReport } from "../../types.js";
 import type { GraphDeps } from "../deps.js";
 import type { RunStateType, RunStateUpdate } from "../state.js";
@@ -14,7 +15,7 @@ export function makeReporterNode(deps: GraphDeps) {
   return async (state: RunStateType): Promise<RunStateUpdate> => {
     const report: RunReport = {
       startedAt: new Date().toISOString(),
-      target: `${deps.target.name} → ${state.config.targetUrl}`,
+      target: `${deps.target.name} → ${redactUrl(state.config.targetUrl)}`,
       scenarios: state.scenarios,
       transcripts: state.transcripts,
       judgeResults: state.judgeResults,
