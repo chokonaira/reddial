@@ -1,11 +1,53 @@
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { messageText } from "../../llm.js";
+import { messageText, type ChatLike } from "../../llm.js";
+import { brokeCharacter } from "../../personas/broke-character.js";
 import { getPersonas } from "../../personas/presets.js";
 import type { Transcript, Turn } from "../../types.js";
 import type { GraphDeps } from "../deps.js";
 import type { RunStateType, RunStateUpdate } from "../state.js";
 
 const DONE_PATTERN = /\[DONE:(goal-reached|gave-up)\]/;
+const TRANSCRIPT_TAG = /<(?=\/?transcript)/gi;
+const WHITESPACE = /[\s\u0085]+/g;
+const MAX_PERSONA_ATTEMPTS = 3;
+
+// One line per turn, so text from the agent cannot pass as a new speaker or close the
+// transcript block. The agent's replies are untrusted.
+function transcriptLine({ role, content }: Turn): string {
+  const flat = content.replace(WHITESPACE, " ").replace(TRANSCRIPT_TAG, "&lt;");
+  return `${role === "user" ? "CUSTOMER" : "AGENT"}: ${flat}`;
+}
+
+// The conversation goes to the persona as one transcript. Replaying it as chat turns
+// put the attack in the model's own mouth and addressed the agent's replies to it, so
+// it answered as the victim of an injection instead of writing the customer.
+function personaView(system: string, turns: Turn[]) {
+  return [
+    new SystemMessage(system),
+    new HumanMessage(
+      turns.length === 0
+        ? "The conversation has not started. Write the customer's opening message."
+        : `<transcript>\n${turns.map(transcriptLine).join("\n\n")}\n</transcript>\n\nWrite the customer's next message.`,
+    ),
+  ];
+}
+
+// A broken line never reaches the target or the transcript, so it cannot end up in a
+// report or teach the next sample to refuse too. Returns null when every attempt broke.
+async function samplePersona(
+  llm: ChatLike,
+  view: ReturnType<typeof personaView>,
+  scenarioId: string,
+): Promise<string | null> {
+  for (let attempt = 1; attempt <= MAX_PERSONA_ATTEMPTS; attempt++) {
+    const line = messageText(await llm.invoke(view)).trim();
+    if (!brokeCharacter(line)) return line;
+    console.warn(
+      `Scenario ${scenarioId}: persona broke character (${attempt}/${MAX_PERSONA_ATTEMPTS}): ${line.slice(0, 120)}`,
+    );
+  }
+  return null;
+}
 
 export function makeSimulatorNode(deps: GraphDeps) {
   return async (state: RunStateType): Promise<RunStateUpdate> => {
@@ -30,20 +72,17 @@ export function makeSimulatorNode(deps: GraphDeps) {
       } else if (i === 0 && scenario.opening) {
         userMessage = scenario.opening;
       } else {
-        // persona's own lines are "assistant", the agent's are "user"
-        const personaView = [
-          new SystemMessage(
-            `${persona.systemPrompt}\n\nYour goal this conversation: ${scenario.goal}`,
-          ),
-          ...turns.map((t) =>
-            t.role === "user"
-              ? { role: "assistant" as const, content: t.content }
-              : { role: "user" as const, content: t.content },
-          ),
-          ...(turns.length === 0 ? [new HumanMessage("(Start the conversation now.)")] : []),
-        ];
         try {
-          userMessage = messageText(await personaLlm.invoke(personaView)).trim();
+          const view = personaView(
+            `${persona.systemPrompt}\n\nYour goal this conversation: ${scenario.goal}`,
+            turns,
+          );
+          const line = await samplePersona(personaLlm, view, scenario.id);
+          if (line === null) {
+            endReason = "persona-broke";
+            break;
+          }
+          userMessage = line;
         } catch (err) {
           console.warn(`Scenario ${scenario.id}: persona error — ${String(err)}`);
           endReason = "persona-error";

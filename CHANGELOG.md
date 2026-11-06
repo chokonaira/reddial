@@ -9,6 +9,10 @@ All notable changes to RedDial are documented here. The project follows semantic
 - Regression suites. `reddial run --save-failures <file>` pins failing conversations to a JSON file, and `reddial replay <file>` runs them again and exits 1 unless every case passes.
 - `DEMO_PATCHED=1` runs the demo bot with its faults fixed, so the fail then pass loop can be tried locally.
 
+### Fixed
+
+- Personas stay in role. The persona model now reads the conversation as one transcript instead of replayed chat turns, which removes nearly all cases of the injector persona refusing the attack or saying it is Claude. A persona line that still breaks character is logged, resampled, and never sent to the target or kept in the transcript. After three broken samples in a row the conversation ends with the new `persona-broke` end reason.
+
 ### Changed
 
 - `Transcript.endReason` has a new value, `script-complete`, for a replayed conversation that played to the end.

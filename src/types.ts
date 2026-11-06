@@ -30,7 +30,8 @@ export interface Transcript {
     | "max-turns"
     | "script-complete"
     | "target-error"
-    | "persona-error";
+    | "persona-error"
+    | "persona-broke";
   targetLatencyMs: number[];
 }
 
