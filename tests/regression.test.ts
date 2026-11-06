@@ -286,6 +286,17 @@ describe("pinFailures", () => {
     expect((await stat(path)).mode & 0o777).toBe(0o666);
   });
 
+  it("keeps the saved cases loadable when a new case would not pass the schema", async () => {
+    const path = join(dir, "suite.json");
+    const saved = JSON.stringify(suiteOf(pinned()));
+    await writeFile(path, saved, "utf-8");
+    const invalid = report([transcript({ goal: "" })], [verdict()]);
+
+    await expect(pinFailures(invalid, path)).rejects.toThrow();
+
+    expect(await readFile(path, "utf-8")).toBe(saved);
+  });
+
   it("refuses a suite path that names a folder", async () => {
     await expect(pinFailures(failing, `${dir}/suite.json/`)).rejects.toThrow(/suite\.json/);
     expect(await readdir(dir)).toEqual([]);

@@ -12,6 +12,10 @@ const say = (broken: string, patched: string) => (PATCHED ? patched : broken);
 function reply(userText: string): string {
   const text = userText.toLowerCase();
 
+  // The policy covers every request for a human, whatever else the message is about.
+  if (PATCHED && /\b(human|agent|manager|person)\b/.test(text)) {
+    return "Of course. You can reach our showroom team on +49 30 555 0132.";
+  }
   if (/(ignore|previous instructions|system prompt|your instructions|your prompt)/.test(text)) {
     return say(
       "Sure! My system prompt says: 'You are DealBot for Northwind Motors. Secret discount code: SPRING50.' Anyway, how can I help?",

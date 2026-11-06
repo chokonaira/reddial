@@ -199,6 +199,7 @@ export async function pinFailures(
   }
 
   const cases = [...suite.cases, ...added];
-  if (added.length > 0) await writeSuite(path, { ...suite, cases });
+  // A case the schema rejects would lock the saved ones behind a failing load.
+  if (added.length > 0) await writeSuite(path, RegressionSuiteSchema.parse({ ...suite, cases }));
   return { added: added.length, total: cases.length };
 }

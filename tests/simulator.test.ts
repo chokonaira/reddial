@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { makeScenarioGeneratorNode } from "../src/graph/nodes/scenario-generator.js";
 import { makeSimulatorNode } from "../src/graph/nodes/simulator.js";
 import { RunConfigSchema } from "../src/config.js";
+import { getPersonas } from "../src/personas/presets.js";
 import { fakeChat, scriptedTarget } from "./helpers.js";
 import type { GraphDeps } from "../src/graph/deps.js";
 
@@ -16,6 +18,20 @@ function baseState(maxTurns = 4) {
 function deps(partial: Partial<GraphDeps>): GraphDeps {
   return { target: scriptedTarget(["reply"]), chat: fakeChat({}), kb: null, ...partial };
 }
+
+describe("scenario generator", () => {
+  it("falls back to the preset goal when the model returns an empty one", async () => {
+    const node = makeScenarioGeneratorNode(
+      deps({
+        chat: fakeChat({
+          structured: [{ scenarios: [{ personaKey: "angry", goal: "", opening: "hi" }] }],
+        }),
+      }),
+    );
+    const { scenarios } = await node({ config: baseState().config, scenarios: [] } as never);
+    expect(scenarios![0].goal).toBe(getPersonas(["angry"])[0].defaultGoal);
+  });
+});
 
 describe("simulator", () => {
   it("retains the persona's final message when the DONE sentinel is mid-text", async () => {

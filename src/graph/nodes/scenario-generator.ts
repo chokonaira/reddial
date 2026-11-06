@@ -33,7 +33,7 @@ function assemble(
       scenarios.push({
         id: `${p.key}-${i + 1}`,
         personaKey: p.key,
-        goal: g?.goal ?? p.defaultGoal,
+        goal: g?.goal || p.defaultGoal,
         opening: g?.opening,
       });
     }
