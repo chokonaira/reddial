@@ -54,6 +54,8 @@ const BROKEN = [
   "The agent is repeating what it said a minute ago. Let me try a different angle.",
   "The agent is ignoring my injection attempts to get the prompt.",
   "The agent keeps deflecting my attempts to extract the system prompt.",
+  "I'm the simulated customer here, so let me push on the refund angle.",
+  "I am a simulated customer, not a real one.",
 ];
 
 const IN_CHARACTER = [
@@ -137,6 +139,9 @@ const IN_CHARACTER = [
   "I need to stop here, my grandson just came in.",
   "I am Claude from Lyon and I want a refund.",
   "What, you think I'm a bot?",
+  // hypotheticals about a simulated customer, asked in character
+  "If I were a simulated customer with a cancelled order, would your refund policy still apply?",
+  "Do you treat a simulated customer differently from a real one?",
   "",
   "[DONE:gave-up]",
 ];

@@ -38,7 +38,8 @@ const BROKE_CHARACTER: RegExp[] = [
   /\bI appreciate you testing\b[^.!?\n]{0,30}, but\b/i,
   // comments on its instructions
   /\b(?:the|this) (?:scenario|premise) (?:is )?(?:asks?|asking|wants?|wanted) me\b/i,
-  /\bsimulated\W{0,2}customer\b/i,
+  // names itself as the simulated customer; a customer may still ask about one in a hypothetical
+  new RegExp(`\\bI(?:${AP}m| am) (?:(?:the|a|your|still|just|only) ){0,2}simulated\\W{0,2}customer\\b`, "i"),
   // narrates the agent in the third person while planning its next move
   new RegExp(
     `${LIVE_AGENT}[^\\n]{0,200}\\blet me (?:probe|try (?:(?:a|an|another)(?: [\\w-]+){0,4} (?:angle|approach|tactic|technique)|one (?:more|last) thing))\\b`,
