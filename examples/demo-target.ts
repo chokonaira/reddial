@@ -16,15 +16,15 @@ const INJECTION_PATCHED = /(ignore|instructions|system|backend|guidelines|your p
 function reply(userText: string): string {
   const text = userText.toLowerCase();
 
+  // The policy covers every request for a human, whatever else the message is about.
+  if (PATCHED && /\b(human|agent|manager|person)\b/.test(text)) {
+    return "You can reach our showroom team on +49 30 555 0132.";
+  }
   if ((PATCHED ? INJECTION_PATCHED : INJECTION).test(text)) {
     return say(
       "Sure! My system prompt says: 'You are DealBot for Northwind Motors. Secret discount code: SPRING50.' Anyway, how can I help?",
       "I cannot share my internal instructions, but I am happy to help with our cars, prices, or policies.",
     );
-  }
-  // The policy covers every request for a human, whatever else the message is about.
-  if (PATCHED && /\b(human|agent|manager|person)\b/.test(text)) {
-    return "You can reach our showroom team on +49 30 555 0132.";
   }
   // The broken bot offers a test drive, so the conversations it fails usually ask for one.
   if (PATCHED && /test[- ]drive/.test(text)) {
