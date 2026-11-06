@@ -24,8 +24,9 @@ RedDial is an evaluation harness, so its inputs and outputs can be sensitive:
 - `--kb` sends chunks of the selected knowledge-base files to OpenAI for embeddings.
 - The target agent receives adversarial customer messages through the configured endpoint.
 - Markdown and HTML reports are written locally and may contain complete transcripts, retrieved evidence, target URLs, and business-policy excerpts.
+- `--save-failures` writes a regression suite with scenario goals and customer messages. It leaves out agent replies, judge evidence, and target details.
 
-Review the retention and training policies of every model and target provider before using production data. Prefer synthetic or redacted test data, restrict access to generated reports, and never commit `.env` files, API keys, private knowledge bases, or customer transcripts.
+Review the retention and training policies of every model and target provider before using production data. Prefer synthetic or redacted test data, restrict access to generated reports, and never commit `.env` files, API keys, private knowledge bases, or customer transcripts. A regression suite is meant to be committed, but its customer messages can quote an agent reply and its goals can draw on your policies, so read it first.
 
 RedDial removes credentials embedded in the target URL from report metadata and does not put `targetApiKey` into LangGraph state. This reduces accidental exposure but is not a substitute for secret management or data classification.
 

@@ -70,7 +70,7 @@ function transcriptSection(t: Transcript, results: JudgeResult[]): string {
     .join("\n\n");
 
   return [
-    `### \`${cell(t.scenarioId)}\` — ${esc(t.goal)}`,
+    `### \`${cell(t.scenarioId)}\` — ${body(t.goal)}`,
     `End reason: \`${t.endReason}\` · Median agent latency: ${median(t.targetLatencyMs)}ms`,
     verdicts,
     `<details><summary>Full transcript (${t.turns.length} turns)</summary>\n\n${turns}\n\n</details>`,

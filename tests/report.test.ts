@@ -51,6 +51,11 @@ describe("renderReport", () => {
     overallScore: 0,
   };
 
+  it("renders no live link from a goal", () => {
+    const linked = { ...transcript, goal: "[click me](https://evil.example/p)" };
+    expect(renderReport({ ...report, transcripts: [linked] })).not.toContain("[click me](");
+  });
+
   it("escapes hostile transcript/goal content", () => {
     const md = renderReport(report);
     expect(md).not.toContain("<img");

@@ -33,7 +33,7 @@ function assemble(
       scenarios.push({
         id: `${p.key}-${i + 1}`,
         personaKey: p.key,
-        goal: g?.goal ?? p.defaultGoal,
+        goal: g?.goal || p.defaultGoal,
         opening: g?.opening,
       });
     }
@@ -43,6 +43,9 @@ function assemble(
 
 export function makeScenarioGeneratorNode(deps: GraphDeps) {
   return async (state: RunStateType): Promise<RunStateUpdate> => {
+    // Scenarios passed in up front (a regression replay) skip generation.
+    if (state.scenarios.length > 0) return {};
+
     const { config } = state;
     const personas = getPersonas(config.personas);
 

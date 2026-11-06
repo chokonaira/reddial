@@ -16,13 +16,18 @@ export function makeSimulatorNode(deps: GraphDeps) {
     const personaLlm = deps.chat(config.models.persona, 0.9);
     const session = deps.target.createSession();
 
+    const { script } = scenario;
+    const turnLimit = script?.length ?? config.maxTurns;
+
     const turns: Turn[] = [];
     const latencies: number[] = [];
-    let endReason: Transcript["endReason"] = "max-turns";
+    let endReason: Transcript["endReason"] = script ? "script-complete" : "max-turns";
 
-    for (let i = 0; i < config.maxTurns; i++) {
+    for (let i = 0; i < turnLimit; i++) {
       let userMessage: string;
-      if (i === 0 && scenario.opening) {
+      if (script) {
+        userMessage = script[i];
+      } else if (i === 0 && scenario.opening) {
         userMessage = scenario.opening;
       } else {
         // persona's own lines are "assistant", the agent's are "user"
@@ -46,7 +51,7 @@ export function makeSimulatorNode(deps: GraphDeps) {
         }
       }
 
-      const done = userMessage.match(DONE_PATTERN);
+      const done = script ? null : userMessage.match(DONE_PATTERN);
       if (done) {
         endReason = done[1] as Transcript["endReason"];
         const remainder = userMessage.replace(DONE_PATTERN, "").trim();

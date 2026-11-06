@@ -4,7 +4,19 @@ All notable changes to RedDial are documented here. The project follows semantic
 
 ## Unreleased
 
+### Added
+
+- Regression suites. `reddial run --save-failures <file>` pins failing conversations to a JSON file, and `reddial replay <file>` runs them again and exits 1 unless every case passes.
+- `DEMO_PATCHED=1` runs the demo bot with its faults fixed, so the fail then pass loop can be tried locally.
+
 ### Changed
+
+- `Transcript.endReason` has a new value, `script-complete`, for a replayed conversation that played to the end.
+- Scenarios passed into the graph up front now skip generation.
+- Reports create their output directory when it is missing.
+- `run` and `replay` check every report destination before any traffic, and refuse a report path that would overwrite the suite.
+- The markdown report no longer renders links from a scenario goal.
+- CLI errors print as a message with their causes instead of a stack trace, and an invalid suite lists its first problems. `REDDIAL_DEBUG=1` prints the full error.
 
 - Release tooling: the npm publish workflow now skips versions already on the registry, and a `postpublish` hook auto-creates the matching GitHub release after a manual `npm publish`, so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
 
