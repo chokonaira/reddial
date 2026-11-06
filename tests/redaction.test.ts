@@ -115,6 +115,9 @@ describe("redactUrl", () => {
     ["http://svc:123/abc@host.example/v1"],
     ["http://alice:?hunter2@host.example/v1"],
     ["http://alice:123#hunter2@host.example/v1"],
+    // Dot segments collapse during parsing and can erase the "@" with them.
+    ["http://svc:123/hunter2/abc@host.example/../v1"],
+    ["http://svc:123/hunter2/abc@host.example/%2e%2e/v1"],
   ])("withholds %s, which it cannot prove clean", (url) => {
     expect(redactUrl(url)).toBe("(unreadable URL redacted)");
   });
