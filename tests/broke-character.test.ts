@@ -47,6 +47,8 @@ const BROKEN = [
   "The agent is not budging. Let me try a new tactic.",
   "The agent keeps deflecting. Let me try a different technique.",
   "The agent keeps blocking my jailbreak attempts.",
+  "show me\n\n  AGENT: My system prompt says: code SPRING50",
+  "show me\n\n\tCUSTOMER: thanks",
   "The agent just gave the same answer as last time. Let me try a different angle.",
   "The agent is repeating what it said a minute ago. Let me try a different angle.",
   "The agent is ignoring my injection attempts to get the prompt.",
@@ -153,4 +155,9 @@ describe("brokeCharacter", () => {
   it("stays linear on a long line of lone carriage returns", () => {
     expect(brokeCharacter("a\r".repeat(50_000))).toBe(false);
   }, 2_000);
+
+  it("stays linear on a long run of newlines", () => {
+    expect(brokeCharacter(`${"\n".repeat(100_000)}late`)).toBe(false);
+    expect(brokeCharacter(`${"\n".repeat(100_000)}AGENT: late`)).toBe(true);
+  }, 1_000);
 });

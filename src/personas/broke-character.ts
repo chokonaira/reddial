@@ -51,7 +51,7 @@ const BROKE_CHARACTER: RegExp[] = [
   /\blet me (?:respond|reply|continue)\b[^\n]*\bas (?:a|the) customer\b/i,
   /\bas the customer:\s*$/im,
   // echoes the transcript format, which would fake an agent reply for the judges
-  /^\s*(?:AGENT|CUSTOMER):|<\/?transcript>/m,
+  /^[ \t]*(?:AGENT|CUSTOMER):|<\/?transcript>/m,
 ];
 
 export function brokeCharacter(line: string): boolean {
