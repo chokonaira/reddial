@@ -16,6 +16,7 @@ All notable changes to RedDial are documented here. The project follows semantic
 - Reports create their output directory when it is missing.
 - `run` and `replay` check every report destination before any traffic, and refuse a report path that would overwrite the suite.
 - The markdown report no longer renders links from a scenario goal.
+- CLI errors print as a message with their causes instead of a stack trace, and an invalid suite lists its first problems. `REDDIAL_DEBUG=1` prints the full error.
 
 - Release tooling: the npm publish workflow now skips versions already on the registry, and a `postpublish` hook auto-creates the matching GitHub release after a manual `npm publish`, so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
 

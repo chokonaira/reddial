@@ -14,12 +14,13 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, sep } from "node:path";
 import { z } from "zod";
+import { describeIssues } from "../errors.js";
 import type { RunReport, Transcript } from "../types.js";
 
 const RegressionCaseSchema = z.object({
   // Printed to the terminal and into reports, so a suite file cannot smuggle markup in.
   id: z.string().regex(/^[a-z0-9-]+$/),
-  personaKey: z.string().min(1),
+  personaKey: z.string().regex(/^[a-z0-9-]+$/),
   goal: z.string().min(1),
   // Customer lines only. Agent replies and judge evidence can quote a leaked
   // prompt, and suites are meant to be committed.
@@ -97,7 +98,8 @@ export async function loadSuiteIfPresent(path: string): Promise<RegressionSuite 
   try {
     return RegressionSuiteSchema.parse(JSON.parse(raw));
   } catch (err) {
-    throw new Error(`Invalid regression suite ${path}: ${String(err)}`);
+    const detail = err instanceof z.ZodError ? describeIssues(err) : String(err);
+    throw new Error(`Invalid regression suite ${path}:\n${detail}`);
   }
 }
 
@@ -113,17 +115,20 @@ function endsInFolder(path: string): boolean {
 }
 
 // realpath gives up on a dangling symlink, but a write through one lands on its target.
-async function resolveTarget(path: string): Promise<string> {
+// Only the leaf has to be a file. Higher up, a folder form such as "out/" is fine, but a
+// missing ".." is still refused: join would collapse it before a link could be followed.
+async function resolveTarget(path: string, leaf = true): Promise<string> {
   try {
     return await realpath(path);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" || endsInFolder(path)) throw err;
+    const folderForm = leaf ? endsInFolder(path) : basename(path) === "..";
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" || folderForm) throw err;
   }
-  const entry = join(await resolveTarget(dirname(path)), basename(path));
+  const entry = join(await resolveTarget(dirname(path), false), basename(path));
   const link = await readlink(entry).catch(() => null);
   if (link === null) return entry;
   // Kept unnormalized: ".." has to apply after a symlinked folder is followed.
-  return resolveTarget(isAbsolute(link) ? link : `${dirname(entry)}/${link}`);
+  return resolveTarget(isAbsolute(link) ? link : `${dirname(entry)}/${link}`, leaf);
 }
 
 // The inode check catches hard links and another casing on a case-insensitive disk.

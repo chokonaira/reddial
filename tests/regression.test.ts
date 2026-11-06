@@ -303,6 +303,11 @@ describe("pinFailures", () => {
     expect((await loadSuite(path)).cases.length).toBe(1);
   });
 
+  it("saves into a missing folder named with a doubled slash", async () => {
+    await pinFailures(failing, `${dir}/out//suite.json`);
+    expect((await loadSuite(join(dir, "out", "suite.json"))).cases.length).toBe(1);
+  });
+
   it("refuses a suite path that names a folder", async () => {
     await expect(pinFailures(failing, `${dir}/suite.json/`)).rejects.toThrow(/suite\.json/);
     expect(await readdir(dir)).toEqual([]);
@@ -389,6 +394,21 @@ describe("loadSuite", () => {
     await expect(loadSuite(path)).rejects.toThrow(/suite\.json/);
   });
 
+  it("rejects a persona key that could carry terminal or log markup", async () => {
+    const path = join(dir, "suite.json");
+    const hostile = pinned({ personaKey: "x\n::error title=replay::all cases passed" });
+    await writeFile(path, JSON.stringify(suiteOf(hostile)), "utf-8");
+    await expect(loadSuite(path)).rejects.toThrow(/personaKey/);
+  });
+
+  it("lists only the first problems of a badly broken suite", async () => {
+    const path = join(dir, "suite.json");
+    await writeFile(path, JSON.stringify({ version: 1, cases: Array(500).fill({}) }), "utf-8");
+    const message = await loadSuite(path).then(() => "", (err: Error) => err.message);
+    expect(message.split("\n").length).toBeLessThan(80);
+    expect(message).toMatch(/\d+ more/);
+  });
+
   it("names the file when it is missing", async () => {
     await expect(loadSuite(join(dir, "nope.json"))).rejects.toThrow(/nope\.json/);
   });
@@ -448,6 +468,11 @@ describe("prepareReports", () => {
     const path = join(dir, "report.md");
     await mkdir(path);
     await expect(prepareReports([path])).rejects.toThrow(/report\.md/);
+  });
+
+  it("accepts a doubled slash or a dot inside a path to a missing folder", async () => {
+    await prepareReports([`${dir}/reports//r.md`, `${dir}/a/./s.json`]);
+    expect((await readdir(dir)).sort()).toEqual(["a", "reports"]);
   });
 
   it("rejects a path that names a folder, without creating it", async () => {

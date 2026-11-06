@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { Command, type OptionValues } from "commander";
+import { describeError } from "./errors.js";
 import { htmlPath } from "./graph/nodes/reporter.js";
 import { PERSONAS } from "./personas/presets.js";
 import { replay, type ReplayStatus } from "./regression/replay.js";
@@ -144,6 +145,6 @@ program
   });
 
 program.parseAsync().catch((err) => {
-  console.error(err);
+  console.error(describeError(err, process.env.REDDIAL_DEBUG === "1"));
   process.exit(1);
 });

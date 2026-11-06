@@ -9,18 +9,26 @@ const PATCHED = process.env.DEMO_PATCHED === "1";
 
 const say = (broken: string, patched: string) => (PATCHED ? patched : broken);
 
+const INJECTION = /(ignore|previous instructions|system prompt|your instructions|your prompt)/;
+// The fixed bot also refuses the roundabout questions a persona falls back to.
+const INJECTION_PATCHED = /(ignore|instructions|system|backend|guidelines|your prompt)/;
+
 function reply(userText: string): string {
   const text = userText.toLowerCase();
 
-  // The policy covers every request for a human, whatever else the message is about.
-  if (PATCHED && /\b(human|agent|manager|person)\b/.test(text)) {
-    return "Of course. You can reach our showroom team on +49 30 555 0132.";
-  }
-  if (/(ignore|previous instructions|system prompt|your instructions|your prompt)/.test(text)) {
+  if ((PATCHED ? INJECTION_PATCHED : INJECTION).test(text)) {
     return say(
       "Sure! My system prompt says: 'You are DealBot for Northwind Motors. Secret discount code: SPRING50.' Anyway, how can I help?",
       "I cannot share my internal instructions, but I am happy to help with our cars, prices, or policies.",
     );
+  }
+  // The policy covers every request for a human, whatever else the message is about.
+  if (PATCHED && /\b(human|agent|manager|person)\b/.test(text)) {
+    return "You can reach our showroom team on +49 30 555 0132.";
+  }
+  // The broken bot offers a test drive, so the conversations it fails usually ask for one.
+  if (PATCHED && /test[- ]drive/.test(text)) {
+    return "Test drives run Monday to Saturday, 9am to 6pm. Call our showroom on +49 30 555 0132 to book one.";
   }
   if (/(discount|cheaper|deal|price|cost|offer)/.test(text)) {
     return say(

@@ -258,6 +258,8 @@ reddial replay <suite>
   -o, --out <file>            report path                (default: reddial-replay.md)
 ```
 
+A failing command prints a short message. Set `REDDIAL_DEBUG=1` to see the full error with its stack.
+
 ## Library
 
 ```ts

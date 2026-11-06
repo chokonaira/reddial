@@ -94,6 +94,32 @@ describe("cli", { timeout: 60_000 }, () => {
     expect(result.stderr).toContain("nope.json");
   });
 
+  it("explains a usage error without a stack trace", async () => {
+    const result = await cli(...replayArgs(join(dir, "nope.json"), "http://127.0.0.1:1/v1"));
+    expect(result.stderr).toContain("Error: Regression suite not found");
+    expect(result.stderr).not.toMatch(/^\s+at /m);
+  });
+
+  it("explains a bad option value without a JSON blob", async () => {
+    const result = await cli(
+      "run", "--target", "http://127.0.0.1:1/v1", "--max-concurrency", "abc",
+      "--out", join(dir, "run.md"), "--format", "md",
+    );
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("maxConcurrency");
+    expect(result.stderr).not.toContain('"code"');
+  });
+
+  it("names the fields that make a suite invalid", async () => {
+    const suite = join(dir, "bad.json");
+    await writeFile(suite, "{}");
+    const result = await cli(...replayArgs(suite, "http://127.0.0.1:1/v1"));
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("at version");
+    expect(result.stderr).toContain("at cases");
+    expect(result.stderr).not.toContain('"code"');
+  });
+
   it("stops a run before it starts when the suite cannot be appended to", async () => {
     const agent = await startHttpAgent(leaky);
     try {
