@@ -4,5 +4,6 @@ dist/
 .env.*
 !.env.example
 reddial-report.*
+reddial-replay.*
 *.log
 .DS_Store

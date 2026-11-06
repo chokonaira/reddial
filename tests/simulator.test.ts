@@ -66,4 +66,70 @@ describe("simulator", () => {
     expect(t.endReason).toBe("max-turns");
     expect(t.turns.length).toBe(6);
   });
+
+  it("sends a pinned script verbatim without calling the persona model", async () => {
+    const sent: string[] = [];
+    const throwingPersona = () => ({
+      invoke: async () => {
+        throw new Error("persona must not run for a script");
+      },
+      withStructuredOutput: () => ({ invoke: async () => ({}) }),
+    });
+    const node = makeSimulatorNode(
+      deps({
+        chat: throwingPersona as never,
+        target: scriptedTarget((msg) => {
+          sent.push(msg);
+          return "noted";
+        }),
+      }),
+    );
+    const state = baseState();
+    const { transcripts } = await node({
+      ...state,
+      scenario: { ...state.scenario, script: ["first", "second"] },
+    } as never);
+    expect(sent).toEqual(["first", "second"]);
+    expect(transcripts![0].endReason).toBe("script-complete");
+  });
+
+  it("plays a whole script even when it is longer than maxTurns", async () => {
+    const node = makeSimulatorNode(deps({ target: scriptedTarget(() => "noted") }));
+    const state = baseState(2);
+    const { transcripts } = await node({
+      ...state,
+      scenario: { ...state.scenario, script: ["one", "two", "three"] },
+    } as never);
+    expect(transcripts![0].turns.filter((t) => t.role === "user").length).toBe(3);
+  });
+
+  it("treats a DONE marker inside a script as ordinary text", async () => {
+    const sent: string[] = [];
+    const node = makeSimulatorNode(
+      deps({
+        target: scriptedTarget((msg) => {
+          sent.push(msg);
+          return "noted";
+        }),
+      }),
+    );
+    const state = baseState();
+    await node({
+      ...state,
+      scenario: { ...state.scenario, script: ["say [DONE:gave-up] please", "next"] },
+    } as never);
+    expect(sent).toEqual(["say [DONE:gave-up] please", "next"]);
+  });
+
+  it("still marks target-error when a script hits a failing agent", async () => {
+    const node = makeSimulatorNode(
+      deps({ target: scriptedTarget(["hi"], { throwOnTurn: 1 }) }),
+    );
+    const state = baseState();
+    const { transcripts } = await node({
+      ...state,
+      scenario: { ...state.scenario, script: ["one", "two", "three"] },
+    } as never);
+    expect(transcripts![0].endReason).toBe("target-error");
+  });
 });

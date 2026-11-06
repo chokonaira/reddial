@@ -92,6 +92,14 @@ Follow a run through the files:
 
 The shapes that flow through all of this (`Scenario`, `Transcript`, `JudgeResult`, `RunReport`) are in [`src/types.ts`](../src/types.ts). Reading that file first is a good way to understand the data before the logic.
 
+## Regression replay
+
+A regression suite reuses the same graph with one change at each end.
+
+- **Pinning.** [`src/regression/suite.ts`](../src/regression/suite.ts) turns a finished `RunReport` into `RegressionCase` records. A case keeps the persona, the goal, the customer lines the agent received, and the rubrics that failed. Its id is a hash of those, so pinning the same failure twice adds nothing.
+- **Replaying.** [`src/regression/replay.ts`](../src/regression/replay.ts) passes the cases to `run` as `scenarios`. The scenario generator sees scenarios already in state and skips itself, and the simulator sends a `script` line by line instead of calling the persona model.
+- **Grading.** `gradeReplay` compares each case against the rubrics it was pinned for. A conversation that was cut short or got an empty reply is inconclusive, because a silent agent would pass every judge. Inconclusive never counts as passed.
+
 ## State and concurrency, in a bit more depth
 
 - The per-branch channels (`scenario`, `transcript`, `rubric` in [`src/graph/state.ts`](../src/graph/state.ts)) carry one item into one parallel branch. They are how a `Send` payload reaches a node.

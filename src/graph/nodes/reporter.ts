@@ -1,4 +1,5 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { renderHtmlReport } from "../../report/html.js";
 import { overallScore, renderReport } from "../../report/markdown.js";
 import type { RunReport } from "../../types.js";
@@ -22,6 +23,7 @@ export function makeReporterNode(deps: GraphDeps) {
 
     const { format, out } = state.config;
     const markdown = renderReport(report);
+    await mkdir(dirname(out), { recursive: true });
     if (format === "md" || format === "both") {
       await writeFile(out, markdown, "utf-8");
     }

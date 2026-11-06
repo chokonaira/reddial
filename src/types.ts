@@ -10,6 +10,8 @@ export interface Scenario {
   personaKey: string;
   goal: string;
   opening?: string;
+  /** exact customer lines to send in order, instead of running the persona model */
+  script?: string[];
 }
 
 export interface Turn {
@@ -22,7 +24,13 @@ export interface Transcript {
   personaKey: string;
   goal: string;
   turns: Turn[];
-  endReason: "goal-reached" | "gave-up" | "max-turns" | "target-error" | "persona-error";
+  endReason:
+    | "goal-reached"
+    | "gave-up"
+    | "max-turns"
+    | "script-complete"
+    | "target-error"
+    | "persona-error";
   targetLatencyMs: number[];
 }
 

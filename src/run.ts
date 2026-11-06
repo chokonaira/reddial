@@ -8,10 +8,12 @@ import { anthropicChat, type ChatFactory } from "./llm.js";
 import { buildKnowledgeBase } from "./rag/ingest.js";
 import type { KnowledgeBase } from "./rag/store.js";
 import { overallScore } from "./report/markdown.js";
-import type { RunReport } from "./types.js";
+import type { RunReport, Scenario } from "./types.js";
 
 export interface RunOverrides {
   chat?: ChatFactory;
+  /** when not empty, run these instead of generating new scenarios */
+  scenarios?: Scenario[];
 }
 
 function makeAdapter(config: RunConfig): TargetAdapter {
@@ -61,7 +63,7 @@ export async function run(
   // Keep the target secret out of graph state (and any tracing of Send payloads).
   const { targetApiKey: _secret, ...graphConfig } = config;
   const state = await graph.invoke(
-    { config: graphConfig },
+    { config: graphConfig, scenarios: overrides.scenarios ?? [] },
     { recursionLimit: 100, maxConcurrency: config.maxConcurrency },
   );
 

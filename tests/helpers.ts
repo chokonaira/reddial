@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { AIMessage } from "@langchain/core/messages";
 import type { Embeddings } from "@langchain/core/embeddings";
 import type { ChatFactory, ChatLike } from "../src/llm.js";
@@ -42,4 +44,32 @@ export function fakeEmbeddings(map: Record<string, number[]>): Embeddings {
     embedDocuments: async (texts: string[]) => texts.map(lookup),
     embedQuery: async (text: string) => lookup(text),
   } as unknown as Embeddings;
+}
+
+// A real OpenAI-compatible agent on a random port. Keeps every message it received.
+export function startHttpAgent(reply: (message: string) => string) {
+  const received: string[] = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      const { messages } = JSON.parse(body) as { messages: { content: string }[] };
+      const message = messages.at(-1)!.content;
+      received.push(message);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ choices: [{ message: { content: reply(message) } }] }));
+    });
+  });
+  return new Promise<{ url: string; received: string[]; close: () => Promise<void> }>(
+    (resolve) => {
+      server.listen(0, "127.0.0.1", () => {
+        const { port } = server.address() as AddressInfo;
+        resolve({
+          url: `http://127.0.0.1:${port}/v1`,
+          received,
+          close: () => new Promise((done) => server.close(() => done())),
+        });
+      });
+    },
+  );
 }
