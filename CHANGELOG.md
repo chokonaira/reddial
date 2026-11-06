@@ -8,6 +8,10 @@ All notable changes to RedDial are documented here. The project follows semantic
 
 - Release tooling: the npm publish workflow now skips versions already on the registry, and a `postpublish` hook auto-creates the matching GitHub release after a manual `npm publish`, so npm versions and GitHub releases stay aligned. See [`docs/RELEASING.md`](docs/RELEASING.md).
 
+### Security
+
+- The target shown in Markdown and HTML reports and in the returned `RunReport` no longer includes credentials, query strings, or fragments. A target URL that cannot be proven clean is replaced by a placeholder.
+
 ## 0.1.3 - 2026-06-13
 
 Maintenance release. No functional or API changes from 0.1.2.

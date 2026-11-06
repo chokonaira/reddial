@@ -7,6 +7,7 @@ import { buildRunGraph } from "./graph/build.js";
 import { anthropicChat, type ChatFactory } from "./llm.js";
 import { buildKnowledgeBase } from "./rag/ingest.js";
 import type { KnowledgeBase } from "./rag/store.js";
+import { redactUrl } from "./report/redact.js";
 import { overallScore } from "./report/markdown.js";
 import type { RunReport } from "./types.js";
 
@@ -23,20 +24,6 @@ function makeAdapter(config: RunConfig): TargetAdapter {
     model: config.targetModel,
     apiKey: config.targetApiKey,
   });
-}
-
-function redactUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    if (u.username || u.password) {
-      u.username = "";
-      u.password = "";
-      return `${u.toString()} (credentials redacted)`;
-    }
-    return url;
-  } catch {
-    return url;
-  }
 }
 
 export async function run(
