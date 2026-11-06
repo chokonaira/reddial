@@ -156,6 +156,10 @@ describe("brokeCharacter", () => {
     expect(brokeCharacter("a\r".repeat(50_000))).toBe(false);
   }, 2_000);
 
+  it("stays linear on a long run of unclosed smart quotes", () => {
+    expect(brokeCharacter("“".repeat(100_000))).toBe(false);
+  }, 1_000);
+
   it("stays linear on a long run of newlines", () => {
     expect(brokeCharacter(`${"\n".repeat(100_000)}late`)).toBe(false);
     expect(brokeCharacter(`${"\n".repeat(100_000)}AGENT: late`)).toBe(true);

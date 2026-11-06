@@ -5,7 +5,7 @@
 // alone must not match. Quoted text is ignored: a customer may quote the agent back.
 const AP = "['’]";
 const NO_YOU = "(?:(?!\\byou\\b)[^.!?\\n])";
-const QUOTED = /"[^"\n]*"|“[^”\n]*”/g;
+const QUOTED = /"[^"\n]*"|“[^“”\n]*”/g;
 const REFUSES = `\\bI(?:${AP}m| am)?\\s*(?:not (?:actually )?going to|not comfortable|can${AP}?t(?! believe)|cannot|won${AP}t|will not|shouldn${AP}t)\\b`;
 // A line that dates itself is about an earlier contact. "As last time" compares turns instead.
 const DATED = `yesterday|this morning|the other day|on \\w+day|(?<!\\b(?:as|than) )last (?:time|night|week|month|year|\\w+day)|(?:hour|day|week|month|year)s? ago`;
