@@ -297,6 +297,12 @@ describe("pinFailures", () => {
     expect(await readFile(path, "utf-8")).toBe(saved);
   });
 
+  it("saves to a file name at the length limit", async () => {
+    const path = join(dir, `${"s".repeat(250)}.json`);
+    await pinFailures(failing, path);
+    expect((await loadSuite(path)).cases.length).toBe(1);
+  });
+
   it("refuses a suite path that names a folder", async () => {
     await expect(pinFailures(failing, `${dir}/suite.json/`)).rejects.toThrow(/suite\.json/);
     expect(await readdir(dir)).toEqual([]);

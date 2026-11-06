@@ -172,7 +172,7 @@ async function writeSuite(path: string, suite: RegressionSuite): Promise<void> {
   const target = await resolveTarget(path);
   await mkdir(dirname(target), { recursive: true });
   const mode = (await stat(target).catch(() => null))?.mode;
-  const temp = `${target}.${randomUUID()}.tmp`;
+  const temp = join(dirname(target), `.${randomUUID()}.tmp`);
   try {
     await writeFile(temp, `${JSON.stringify(suite, null, 2)}\n`, { encoding: "utf-8", mode });
     // The umask cuts down the mode writeFile creates a file with.
