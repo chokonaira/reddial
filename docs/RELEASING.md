@@ -14,7 +14,7 @@ In the npm package settings for `reddial`, add a trusted publisher with:
 
 The workflow path is `.github/workflows/release.yml`. The environment value must match the `environment: npm` declaration in that workflow.
 
-Trusted publishing requires npm CLI 11.5.1 or newer. The release workflow uses Node 24 so the bundled npm client can authenticate with npm through GitHub Actions OIDC instead of falling back to a long-lived token.
+Trusted publishing requires npm CLI 11.5.1 or newer. The release workflow uses Node 24 and upgrades npm to the latest release before publishing, so the client authenticates with npm through GitHub Actions OIDC. The workflow reads no `NPM_TOKEN` secret; if one is still stored in the repository settings, delete it.
 
 ## Release Process
 
@@ -29,6 +29,17 @@ gh release create "v$(node -p "require('./package.json').version")" --generate-n
 ```
 
 The release event triggers `Publish To npm`, which verifies the tag matches `package.json`, skips publishing if that version is already on the registry, and otherwise runs `npm publish --access public`. npm generates provenance automatically for trusted publishing.
+
+#### If the automatic publish failed
+
+Fix the cause first (usually the trusted publisher setup on npm), then run the same workflow by hand for the existing release. The run checks that the GitHub release exists, that its tag matches `package.json`, and that the version is not on npm yet, so repeating it is safe:
+
+```sh
+gh workflow run release.yml -f tag=vX.Y.Z
+gh run watch
+```
+
+Re-running the failed run from the Actions page is not the same thing: a re-run reuses the workflow file as it was for that run, so a fix to the workflow only takes effect through `gh workflow run` or a new release.
 
 ### Path B: publish from your machine
 
