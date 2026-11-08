@@ -42,9 +42,19 @@ gh run list --workflow release.yml --limit 1
 gh run watch <run id from the line above>
 ```
 
-`-r vX.Y.Z` runs the workflow at the tag itself, so the provenance names the tagged commit and the workflow file is the tag's own. Tags made before this workflow had a manual trigger (v0.2.0 and older) cannot be run this way; publish those from a maintainer's machine (Path B).
+`-r vX.Y.Z` runs the workflow at the tag itself, and the run refuses to continue from any other ref, so the published code, its provenance and the workflow file all come from the release. That also means the manual run can only repair problems outside the repository, such as the trusted publisher configuration on npm. A fix to the workflow file itself reaches an existing release only through the local backfill below; new releases pick it up on their own. Re-running the failed run from the Actions page reuses that run's workflow file and commit as well.
 
-Re-running the failed run from the Actions page is not the same thing: a re-run reuses the workflow file as it was for that run, so a fix to the workflow only takes effect through `gh workflow run` or a new release.
+Tags made before this workflow had a manual trigger (v0.2.0 and older) cannot be run this way. To publish an existing tag from a maintainer's machine without bumping anything:
+
+```sh
+git switch --detach vX.Y.Z
+npm ci
+npm whoami || npm login
+npm publish --access public
+git switch -
+```
+
+`prepack` builds from the tagged tree, npm asks for the one-time code in the browser, and `postpublish` finds the existing GitHub release and stops.
 
 If the publish step fails with `404 Not Found - PUT https://registry.npmjs.org/reddial`, the OIDC token exchange failed and npm had no usable credential: check the five trusted publisher values and that the configuration has not expired. The publish step logs at verbose level, so the registry's message about the exchange is in the job log; no token is printed.
 

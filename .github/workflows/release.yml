@@ -4,8 +4,10 @@ name: Publish To npm
 # is stored anywhere. The one-time setup on npmjs.com is in docs/RELEASING.md.
 #
 # Runs when a GitHub release is published. It can also be started by hand for
-# a release whose automatic publish failed: Actions > Publish To npm > Run
-# workflow, with the release tag (for example v0.2.0).
+# a release whose automatic publish failed, at the release tag itself:
+#   gh workflow run release.yml -r vX.Y.Z -f tag=vX.Y.Z
+# (or Actions > Publish To npm > Run workflow, choosing the tag as the ref to
+# run from and entering the same tag). The run refuses any other ref.
 
 on:
   release:
@@ -29,12 +31,16 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - name: Verify the GitHub release exists and is neither a draft nor a prerelease
+      - name: Verify the manual run is at the release tag and the release is published, not a draft or prerelease
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          if [ "$GITHUB_REF" != "refs/tags/$RELEASE_TAG" ]; then
+            echo "::error::This run is at $GITHUB_REF. Start it at the tag so the published code, its provenance and the workflow file all come from the release: gh workflow run release.yml -r $RELEASE_TAG -f tag=$RELEASE_TAG"
+            exit 1
+          fi
           BLOCKED="$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' || true)"
           if [ "$BLOCKED" != "false" ]; then
             echo "::error::$RELEASE_TAG is not a published full release (draft or prerelease: '${BLOCKED:-no such release}'); only full releases go to npm."
