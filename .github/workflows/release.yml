@@ -1,8 +1,23 @@
 name: Publish To npm
 
+# Publishes with npm trusted publishing (GitHub Actions OIDC), so no npm token
+# is stored anywhere. The one-time setup on npmjs.com is in docs/RELEASING.md.
+#
+# Runs when a GitHub release is published. It can also be started by hand for
+# a release whose automatic publish failed, at the release tag itself:
+#   gh workflow run release.yml -r vX.Y.Z -f tag=vX.Y.Z
+# (or Actions > Publish To npm > Run workflow, choosing the tag as the ref to
+# run from and entering the same tag). The run refuses any other ref.
+
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag of an existing GitHub release to publish, for example v0.2.0"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,20 +25,41 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event.release.prerelease == false }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false }}
     runs-on: ubuntu-latest
     environment: npm
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
+      - name: Verify the manual run is at the release tag and the release is published, not a draft or prerelease
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/tags/$RELEASE_TAG" ]; then
+            echo "::error::This run is at $GITHUB_REF. Start it at the tag so the published code, its provenance and the workflow file all come from the release: gh workflow run release.yml -r $RELEASE_TAG -f tag=$RELEASE_TAG"
+            exit 1
+          fi
+          BLOCKED="$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' || true)"
+          if [ "$BLOCKED" != "false" ]; then
+            echo "::error::$RELEASE_TAG is not a published full release (draft or prerelease: '${BLOCKED:-no such release}'); only full releases go to npm."
+            exit 1
+          fi
+          echo "Publishing release $RELEASE_TAG"
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+      - name: Check the npm client supports trusted publishing (11.5.1 or newer)
+        run: |
+          NPM_VERSION="$(npm --version)"
+          echo "npm ${NPM_VERSION}"
+          node -e "const [a, b, c] = process.argv[1].split('.').map(Number); if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) { console.error('npm ' + process.argv[1] + ' is older than 11.5.1, which trusted publishing needs'); process.exit(1); }" "$NPM_VERSION"
       - name: Verify release tag matches package version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: >-
           node --input-type=module -e
           "import pkg from './package.json' with { type: 'json' };
@@ -50,7 +86,9 @@ jobs:
         if: steps.published.outputs.exists == 'false'
       - run: npm run package:smoke
         if: steps.published.outputs.exists == 'false'
-      - run: npm publish --access public
+      - name: Publish with trusted publishing (provenance is attached automatically)
         if: steps.published.outputs.exists == 'false'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Verbose shows the registry's message when the OIDC exchange fails; npm prints no token.
+          NPM_CONFIG_LOGLEVEL: verbose
+        run: npm publish --access public
