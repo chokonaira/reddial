@@ -29,14 +29,18 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - name: Verify the GitHub release exists
+      - name: Verify the GitHub release exists and is not a prerelease
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view "$RELEASE_TAG" --json tagName,isPrerelease \
-            --jq '"Publishing release " + .tagName + " (prerelease " + (.isPrerelease | tostring) + ")"'
+          PRERELEASE="$(gh release view "$RELEASE_TAG" --json isPrerelease --jq .isPrerelease || true)"
+          if [ "$PRERELEASE" != "false" ]; then
+            echo "::error::$RELEASE_TAG is not a published full release (prerelease flag: '${PRERELEASE:-no such release}'); only full releases go to npm."
+            exit 1
+          fi
+          echo "Publishing release $RELEASE_TAG"
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}

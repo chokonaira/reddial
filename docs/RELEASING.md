@@ -32,7 +32,7 @@ The release event triggers `Publish To npm`, which verifies the tag matches `pac
 
 #### If the automatic publish failed
 
-Fix the cause first (usually the trusted publisher setup on npm), then run the same workflow by hand for the existing release. The run checks that the GitHub release exists, that its tag matches `package.json`, and that the version is not on npm yet, so repeating it is safe:
+Fix the cause first (usually the trusted publisher setup on npm), then run the same workflow by hand for the existing release. The run checks that the GitHub release exists and is not a prerelease, that its tag matches `package.json`, and that the version is not on npm yet, so repeating it is safe:
 
 ```sh
 gh workflow run release.yml -f tag=vX.Y.Z
