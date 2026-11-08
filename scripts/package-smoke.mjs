@@ -16,7 +16,9 @@ try {
       { encoding: "utf8", env: { ...process.env, npm_config_cache: cache } },
     ),
   );
-  const tarball = join(temp, packed[0].filename);
+  // npm 11 prints an array; npm 12 prints an object keyed by package name.
+  const packedEntry = Array.isArray(packed) ? packed[0] : Object.values(packed)[0];
+  const tarball = join(temp, packedEntry.filename);
 
   mkdirSync(consumer);
   writeFileSync(join(consumer, "package.json"), '{"private":true,"type":"module"}\n');

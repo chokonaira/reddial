@@ -29,15 +29,15 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - name: Verify the GitHub release exists and is not a prerelease
+      - name: Verify the GitHub release exists and is neither a draft nor a prerelease
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          PRERELEASE="$(gh release view "$RELEASE_TAG" --json isPrerelease --jq .isPrerelease || true)"
-          if [ "$PRERELEASE" != "false" ]; then
-            echo "::error::$RELEASE_TAG is not a published full release (prerelease flag: '${PRERELEASE:-no such release}'); only full releases go to npm."
+          BLOCKED="$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease' || true)"
+          if [ "$BLOCKED" != "false" ]; then
+            echo "::error::$RELEASE_TAG is not a published full release (draft or prerelease: '${BLOCKED:-no such release}'); only full releases go to npm."
             exit 1
           fi
           echo "Publishing release $RELEASE_TAG"
@@ -48,10 +48,11 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - name: Use an npm client that supports trusted publishing (11.5.1 or newer)
+      - name: Check the npm client supports trusted publishing (11.5.1 or newer)
         run: |
-          npm install -g npm@latest
-          npm --version
+          NPM_VERSION="$(npm --version)"
+          echo "npm ${NPM_VERSION}"
+          node -e "const [a, b, c] = process.argv[1].split('.').map(Number); if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) { console.error('npm ' + process.argv[1] + ' is older than 11.5.1, which trusted publishing needs'); process.exit(1); }" "$NPM_VERSION"
       - name: Verify release tag matches package version
         run: >-
           node --input-type=module -e
@@ -81,4 +82,7 @@ jobs:
         if: steps.published.outputs.exists == 'false'
       - name: Publish with trusted publishing (provenance is attached automatically)
         if: steps.published.outputs.exists == 'false'
+        env:
+          # Verbose shows the registry's message when the OIDC exchange fails; npm prints no token.
+          NPM_CONFIG_LOGLEVEL: verbose
         run: npm publish --access public

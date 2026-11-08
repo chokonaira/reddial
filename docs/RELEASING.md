@@ -14,7 +14,9 @@ In the npm package settings for `reddial`, add a trusted publisher with:
 
 The workflow path is `.github/workflows/release.yml`. The environment value must match the `environment: npm` declaration in that workflow.
 
-Trusted publishing requires npm CLI 11.5.1 or newer. The release workflow uses Node 24 and upgrades npm to the latest release before publishing, so the client authenticates with npm through GitHub Actions OIDC. The workflow reads no `NPM_TOKEN` secret; if one is still stored in the repository settings, delete it.
+npm does not check these values when you save them, and they are case sensitive. A new trusted publisher must complete its first successful publish within two days; after that it expires and can neither be used nor edited. So delete any older configuration for this package, create the new one right before the publish, and publish within two days.
+
+Trusted publishing requires npm CLI 11.5.1 or newer. The release workflow uses Node 24, whose bundled npm is newer than that, and checks the version before publishing. It does not upgrade npm: npm 12 changed the output of `npm pack --json`, and a newer major may change more. The workflow reads no `NPM_TOKEN` secret; if one is still stored in the repository settings, delete it.
 
 ## Release Process
 
@@ -32,14 +34,19 @@ The release event triggers `Publish To npm`, which verifies the tag matches `pac
 
 #### If the automatic publish failed
 
-Fix the cause first (usually the trusted publisher setup on npm), then run the same workflow by hand for the existing release. The run checks that the GitHub release exists and is not a prerelease, that its tag matches `package.json`, and that the version is not on npm yet, so repeating it is safe:
+Fix the cause first (usually the trusted publisher setup on npm), then run the same workflow by hand for the existing release. The run checks that the GitHub release exists and is neither a draft nor a prerelease, that its tag matches `package.json`, and that the version is not on npm yet, so repeating it is safe:
 
 ```sh
-gh workflow run release.yml -f tag=vX.Y.Z
-gh run watch
+gh workflow run release.yml -r vX.Y.Z -f tag=vX.Y.Z
+gh run list --workflow release.yml --limit 1
+gh run watch <run id from the line above>
 ```
 
+`-r vX.Y.Z` runs the workflow at the tag itself, so the provenance names the tagged commit and the workflow file is the tag's own. Tags made before this workflow had a manual trigger (v0.2.0 and older) cannot be run this way; publish those from a maintainer's machine (Path B).
+
 Re-running the failed run from the Actions page is not the same thing: a re-run reuses the workflow file as it was for that run, so a fix to the workflow only takes effect through `gh workflow run` or a new release.
+
+If the publish step fails with `404 Not Found - PUT https://registry.npmjs.org/reddial`, the OIDC token exchange failed and npm had no usable credential: check the five trusted publisher values and that the configuration has not expired. The publish step logs at verbose level, so the registry's message about the exchange is in the job log; no token is printed.
 
 ### Path B: publish from your machine
 
