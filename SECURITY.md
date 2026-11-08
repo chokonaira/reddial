@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Security fixes are made against the latest published `0.1.x` release and `main`. Upgrade to the newest release before reporting an issue that may already be fixed.
+Security fixes are made against the latest published `0.2.x` release and `main`. Upgrade to the newest release before reporting an issue that may already be fixed.
 
 ## Reporting A Vulnerability
 
